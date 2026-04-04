@@ -27,9 +27,16 @@
   - 測試張量形狀
   - 測試注意力遮罩
   - 測試位置編碼模式
-- [ ] 實作位置前饋網路（Position-wise Feedforward Network）
-- [ ] 實作層歸一化（Layer Normalization）
-- [ ] 加入殘差連接（Residual Connections）
+- [x] 實作位置前饋網路（Position-wise Feedforward Network）
+  - 標準 FFN 和門控 FFN
+  - ReLU 和 GELU 激活函數
+- [x] 實作 Encoder Layer
+  - 整合所有元件
+  - 層歸一化（Layer Normalization）
+  - 殘差連接（Residual Connections）
+- [x] 實作完整 Encoder（堆疊多層）
+
+**✅ Phase 1 完成！34 個單元測試全部通過**
 
 **Commits：** 每個元件一個描述清楚的 commit
 
