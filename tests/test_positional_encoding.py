@@ -1,10 +1,10 @@
 """
-位置編碼的單元測試
+Unit tests for positional encoding
 
-測試目標：
-1. 驗證輸出形狀正確
-2. 驗證位置編碼確實有被加上
-3. 驗證不同位置的編碼是不同的
+Test goals:
+1. Verify output shape is correct
+2. Verify positional encoding is actually added
+3. Verify different positions have different encodings
 """
 
 import torch
@@ -13,93 +13,93 @@ from transformer.positional_encoding import PositionalEncoding
 
 
 class TestPositionalEncoding:
-    """測試位置編碼"""
+    """Test Positional Encoding"""
 
     def test_output_shape(self):
-        """測試輸出形狀是否正確"""
+        """Test that output shape is correct"""
         d_model = 512
         batch_size = 2
         seq_len = 10
 
-        pe = PositionalEncoding(d_model, dropout=0.0)  # dropout=0 方便測試
+        pe = PositionalEncoding(d_model, dropout=0.0)  # dropout=0 for testing
         x = torch.randn(batch_size, seq_len, d_model)
 
         output = pe(x)
 
-        # 輸出形狀應該和輸入一樣
+        # Output shape should match input
         assert output.shape == (batch_size, seq_len, d_model)
 
     def test_positional_encoding_added(self):
-        """測試位置編碼是否確實被加到輸入上"""
+        """Test that positional encoding is actually added to input"""
         d_model = 512
         batch_size = 1
         seq_len = 10
 
-        pe = PositionalEncoding(d_model, dropout=0.0)  # dropout=0 方便測試
+        pe = PositionalEncoding(d_model, dropout=0.0)  # dropout=0 for testing
 
-        # 使用全 0 輸入，這樣輸出就只有位置編碼
+        # Use all-zero input, so output will only contain positional encoding
         x = torch.zeros(batch_size, seq_len, d_model)
         output = pe(x)
 
-        # 輸出不應該全是 0（因為加了位置編碼）
+        # Output should not be all zeros (because positional encoding was added)
         assert not torch.allclose(output, torch.zeros_like(output))
 
     def test_different_positions_different_encodings(self):
-        """測試不同位置的編碼是否不同"""
+        """Test that different positions have different encodings"""
         d_model = 512
         max_len = 100
 
         pe = PositionalEncoding(d_model, max_len=max_len, dropout=0.0)
 
-        # 取出位置 0 和位置 1 的編碼
+        # Extract encodings at position 0 and position 1
         pos_0 = pe.pe[0, 0, :]  # shape: (d_model,)
         pos_1 = pe.pe[0, 1, :]  # shape: (d_model,)
 
-        # 兩個位置的編碼應該不一樣
+        # Encodings at different positions should be different
         assert not torch.allclose(pos_0, pos_1)
 
     def test_encoding_range(self):
-        """測試位置編碼的值範圍（應該在 -1 到 1 之間）"""
+        """Test that positional encoding values are in range [-1, 1]"""
         d_model = 512
         max_len = 1000
 
         pe = PositionalEncoding(d_model, max_len=max_len, dropout=0.0)
 
-        # 檢查所有位置編碼的值是否在 [-1, 1] 範圍內
-        # （因為用的是 sin/cos）
+        # Check that all positional encoding values are within [-1, 1]
+        # (because we use sin/cos)
         assert torch.all(pe.pe >= -1.0)
         assert torch.all(pe.pe <= 1.0)
 
     def test_supports_variable_length(self):
-        """測試是否支援不同長度的序列"""
+        """Test that it supports sequences of different lengths"""
         d_model = 256
         batch_size = 2
 
         pe = PositionalEncoding(d_model, max_len=1000, dropout=0.0)
 
-        # 測試不同的序列長度
+        # Test with different sequence lengths
         for seq_len in [5, 10, 50, 100]:
             x = torch.randn(batch_size, seq_len, d_model)
             output = pe(x)
             assert output.shape == (batch_size, seq_len, d_model)
 
     def test_d_model_must_be_even(self):
-        """測試 d_model 為奇數時是否還能運作"""
-        # 注意：原始實作對奇數 d_model 可能有問題
-        # 這個測試確保我們能處理這種情況
-        d_model = 511  # 奇數
+        """Test that odd d_model still works"""
+        # Note: Original implementation may have issues with odd d_model
+        # This test ensures we can handle this case
+        d_model = 511  # odd number
         batch_size = 1
         seq_len = 10
 
-        # 對於奇數 d_model，最後一個維度可能沒有被正確編碼
-        # 但程式應該還是能運行
+        # For odd d_model, the last dimension might not be properly encoded
+        # but the code should still run
         try:
             pe = PositionalEncoding(d_model, dropout=0.0)
             x = torch.randn(batch_size, seq_len, d_model)
             output = pe(x)
             assert output.shape == (batch_size, seq_len, d_model)
         except Exception as e:
-            pytest.skip(f"奇數 d_model 不支援: {e}")
+            pytest.skip(f"Odd d_model not supported: {e}")
 
 
 if __name__ == "__main__":

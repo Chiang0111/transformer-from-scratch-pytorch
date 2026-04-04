@@ -12,21 +12,24 @@ Build a production-ready transformer implementation that demonstrates:
 **Goal:** Understand the core innovation of transformers
 
 ### Tasks
-- [ ] Set up project structure (folders, requirements.txt)
-- [ ] Implement scaled dot-product attention
+- [x] Set up project structure (folders, requirements.txt)
+- [x] Implement scaled dot-product attention
   - Clean class with type hints
   - Docstrings explaining the math
   - Handle masking properly
-- [ ] Implement multi-head attention
+- [x] Implement multi-head attention
   - Split heads correctly
   - Concatenate and project output
-- [ ] Implement positional encoding
+- [x] Implement positional encoding
   - Sinusoidal encoding
   - Add to input embeddings
-- [ ] Write unit tests for all components
+- [x] Write unit tests for all components
   - Test tensor shapes
   - Test attention masks
   - Test positional encoding patterns
+- [ ] Implement position-wise feedforward network
+- [ ] Implement layer normalization
+- [ ] Add residual connections
 
 **Commits:** One commit per component with descriptive messages
 
@@ -36,9 +39,6 @@ Build a production-ready transformer implementation that demonstrates:
 **Goal:** Assemble the full transformer model
 
 ### Tasks
-- [ ] Implement position-wise feedforward network
-  - Two linear layers with ReLU/GELU
-  - Proper dimensions
 - [ ] Implement encoder layer
   - Multi-head attention
   - Add & Norm

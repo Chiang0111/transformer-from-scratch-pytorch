@@ -1,5 +1,7 @@
 # Transformer from Scratch (PyTorch)
 
+[English](README.md) | [中文](https://github.com/Chiang0111/transformer-from-scratch-pytorch/tree/zh-CN)
+
 A **production-ready** PyTorch implementation of the Transformer architecture from ["Attention Is All You Need"](https://arxiv.org/abs/1706.03762).
 
 ## Why This Repository Exists
