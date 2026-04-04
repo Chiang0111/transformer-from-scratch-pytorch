@@ -1,157 +1,157 @@
-# Development Plan: Transformer from Scratch
+# 開發計畫：從零實作 Transformer
 
-## Project Goal
-Build a production-ready transformer implementation that demonstrates:
-- Deep understanding of transformer architecture
-- Ability to write clean, modular, tested code
-- Skills needed for AI Engineer roles
-
----
-
-## Phase 1: Foundation (Week 1)
-**Goal:** Understand the core innovation of transformers
-
-### Tasks
-- [ ] Set up project structure (folders, requirements.txt)
-- [ ] Implement scaled dot-product attention
-  - Clean class with type hints
-  - Docstrings explaining the math
-  - Handle masking properly
-- [ ] Implement multi-head attention
-  - Split heads correctly
-  - Concatenate and project output
-- [ ] Implement positional encoding
-  - Sinusoidal encoding
-  - Add to input embeddings
-- [ ] Write unit tests for all components
-  - Test tensor shapes
-  - Test attention masks
-  - Test positional encoding patterns
-
-**Commits:** One commit per component with descriptive messages
+## 專案目標
+建構一個生產級的 Transformer 實作，展現：
+- 對 Transformer 架構的深度理解
+- 撰寫簡潔、模組化、經過測試的程式碼能力
+- AI 工程師職位所需的技能
 
 ---
 
-## Phase 2: Architecture (Week 2)
-**Goal:** Assemble the full transformer model
+## Phase 1：基礎（第 1 週）
+**目標：** 理解 Transformer 的核心創新
 
-### Tasks
-- [ ] Implement position-wise feedforward network
-  - Two linear layers with ReLU/GELU
-  - Proper dimensions
-- [ ] Implement encoder layer
-  - Multi-head attention
+### 任務
+- [x] 建立專案結構（資料夾、requirements.txt）
+- [x] 實作縮放點積注意力（Scaled Dot-Product Attention）
+  - 簡潔的類別與型別提示
+  - 解釋數學原理的 docstrings
+  - 正確處理遮罩（masking）
+- [x] 實作多頭注意力（Multi-Head Attention）
+  - 正確分割多個頭
+  - 串接並投影輸出
+- [x] 實作位置編碼（Positional Encoding）
+  - 正弦波編碼
+  - 加到輸入嵌入
+- [x] 為所有元件撰寫單元測試
+  - 測試張量形狀
+  - 測試注意力遮罩
+  - 測試位置編碼模式
+- [ ] 實作位置前饋網路（Position-wise Feedforward Network）
+- [ ] 實作層歸一化（Layer Normalization）
+- [ ] 加入殘差連接（Residual Connections）
+
+**Commits：** 每個元件一個描述清楚的 commit
+
+---
+
+## Phase 2：架構（第 2 週）
+**目標：** 組裝完整的 Transformer 模型
+
+### 任務
+- [ ] 實作 Encoder 層
+  - 多頭注意力
   - Add & Norm
-  - Feedforward
+  - 前饋網路
   - Add & Norm
-- [ ] Implement decoder layer
-  - Masked self-attention
-  - Cross-attention to encoder
-  - Feedforward
-  - All residual connections
-- [ ] Stack encoder and decoder layers
-- [ ] Add embedding layers and final linear projection
-- [ ] Test full forward pass with dummy data
-- [ ] Write tests for each layer
+- [ ] 實作 Decoder 層
+  - 遮罩自注意力（Masked Self-Attention）
+  - 交叉注意力到 Encoder（Cross-Attention）
+  - 前饋網路
+  - 所有殘差連接
+- [ ] 堆疊 Encoder 和 Decoder 層
+- [ ] 加入嵌入層和最終線性投影
+- [ ] 用假資料測試完整前向傳播
+- [ ] 為每個層撰寫測試
 
-**Commits:** One commit per layer type
-
----
-
-## Phase 3: Training (Week 3)
-**Goal:** Make it actually work on real data
-
-### Tasks
-- [ ] Prepare lightweight dataset
-  - Small translation task (English→French)
-  - Or number sequence tasks (e.g., reverse, sort)
-  - Keep dataset small for CPU training
-- [ ] Implement training loop
-  - Label smoothing
-  - Learning rate scheduling
-  - Gradient clipping
-- [ ] Add evaluation metrics
-  - Loss tracking
-  - Accuracy/BLEU score
-- [ ] Train small model (CPU-friendly)
-  - 2 layers, 256 dimensions, 4 heads
-  - ~10-20 min training on CPU
-- [ ] Save and load checkpoints
-- [ ] Create training script (train.py)
-
-**Commits:** Separate commits for data prep, training loop, evaluation
+**Commits：** 每種層一個 commit
 
 ---
 
-## Phase 4: Polish (Week 4)
-**Goal:** Make it portfolio-ready
+## Phase 3：訓練（第 3 週）
+**目標：** 讓它在真實資料上實際運作
 
-### Tasks
-- [ ] Clean up code
-  - Remove debug prints
-  - Consistent naming
-  - Add type hints everywhere
-  - Comprehensive docstrings
-- [ ] Write comprehensive README
-  - Motivation and goals
-  - Architecture diagram
-  - Usage examples
-  - How to train
-  - Results
-- [ ] Create Jupyter notebook tutorial
-  - Visualize attention weights
-  - Step-by-step walkthrough
-  - Explain design decisions
-- [ ] Add examples/
-  - Simple inference script
-  - Pretrained small model (if possible)
-- [ ] Code review and refactor
-  - DRY principles
-  - Remove duplication
-  - Improve readability
+### 任務
+- [ ] 準備輕量資料集
+  - 小型翻譯任務（英文→法文）
+  - 或數字序列任務（如：反轉、排序）
+  - 保持資料集小規模以便 CPU 訓練
+- [ ] 實作訓練迴圈
+  - 標籤平滑（Label Smoothing）
+  - 學習率排程（Learning Rate Scheduling）
+  - 梯度裁剪（Gradient Clipping）
+- [ ] 加入評估指標
+  - 追蹤損失
+  - 準確率/BLEU 分數
+- [ ] 訓練小模型（CPU 友善）
+  - 2 層、256 維度、4 個頭
+  - 在 CPU 上約 10-20 分鐘訓練時間
+- [ ] 儲存和載入檢查點
+- [ ] 建立訓練腳本（train.py）
 
-**Commits:** Polish commits with clear descriptions
+**Commits：** 資料準備、訓練迴圈、評估分別 commit
 
 ---
 
-## Success Criteria
+## Phase 4：打磨（第 4 週）
+**目標：** 讓它成為作品集就緒的狀態
 
-### Technical
-- ✅ Model trains and converges on small dataset
-- ✅ All components have unit tests
-- ✅ Code is modular and reusable
-- ✅ Proper type hints and documentation
+### 任務
+- [ ] 清理程式碼
+  - 移除除錯用的 print
+  - 一致的命名
+  - 到處加上型別提示
+  - 完整的 docstrings
+- [ ] 撰寫完整的 README
+  - 動機與目標
+  - 架構圖
+  - 使用範例
+  - 如何訓練
+  - 結果
+- [ ] 建立 Jupyter notebook 教學
+  - 視覺化注意力權重
+  - 逐步解說
+  - 解釋設計決策
+- [ ] 加入 examples/
+  - 簡單的推論腳本
+  - 預訓練的小模型（如果可能）
+- [ ] 程式碼審查與重構
+  - DRY 原則
+  - 移除重複
+  - 改善可讀性
 
-### Portfolio
-- ✅ README clearly explains the project
-- ✅ Code demonstrates production practices
-- ✅ Git history shows thoughtful development
-- ✅ Can explain every line in an interview
-
-### Learning
-- ✅ Understand attention mechanism deeply
-- ✅ Can explain why transformers work
-- ✅ Know common pitfalls and solutions
-- ✅ Practiced writing production-ready ML code
-
----
-
-## GPU Requirements
-
-**Good news: GPU is NOT required for this project!**
-
-We'll keep the model and dataset small so everything runs on CPU:
-- Small model: 2-4 layers, 256-512 dimensions
-- Lightweight dataset: 10k-50k examples
-- Training time: 10-30 minutes on CPU
-
-If you get access to GPU later, the same code will run faster - no changes needed.
+**Commits：** 打磨的 commits 要有清楚描述
 
 ---
 
-## Time Estimate
-- **Aggressive:** 2 weeks (2-3 hours/day)
-- **Comfortable:** 4 weeks (1 hour/day)
-- **Learning-focused:** 6 weeks (with deep dives)
+## 成功標準
 
-**Recommendation:** Take your time in Phase 1. Understanding attention is 80% of understanding transformers.
+### 技術面
+- ✅ 模型在小資料集上訓練並收斂
+- ✅ 所有元件都有單元測試
+- ✅ 程式碼是模組化且可重用的
+- ✅ 適當的型別提示和文件
+
+### 作品集面
+- ✅ README 清楚解釋專案
+- ✅ 程式碼展現生產實務
+- ✅ Git 歷史顯示有思考的開發過程
+- ✅ 能在面試中解釋每一行程式碼
+
+### 學習面
+- ✅ 深度理解注意力機制
+- ✅ 能解釋為什麼 Transformer 有效
+- ✅ 知道常見陷阱與解決方案
+- ✅ 練習撰寫生產級 ML 程式碼
+
+---
+
+## GPU 需求
+
+**好消息：這個專案不需要 GPU！**
+
+我們會保持模型和資料集小規模，所以一切都能在 CPU 上執行：
+- 小模型：2-4 層、256-512 維度
+- 輕量資料集：10k-50k 範例
+- 訓練時間：CPU 上 10-30 分鐘
+
+如果之後有 GPU，同樣的程式碼會跑得更快 - 不需要任何修改。
+
+---
+
+## 時間預估
+- **積極：** 2 週（每天 2-3 小時）
+- **舒適：** 4 週（每天 1 小時）
+- **深度學習導向：** 6 週（含深入探討）
+
+**建議：** 在 Phase 1 花足夠時間。理解注意力機制就等於理解了 80% 的 Transformer。

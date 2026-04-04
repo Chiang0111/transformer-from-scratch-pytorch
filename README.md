@@ -1,55 +1,58 @@
 # Transformer from Scratch (PyTorch)
 
-A **production-ready** PyTorch implementation of the Transformer architecture from ["Attention Is All You Need"](https://arxiv.org/abs/1706.03762).
+[English](https://github.com/Chiang0111/transformer-from-scratch-pytorch) | [繁體中文](README.md)
 
-## Why This Repository Exists
+一個**生產級**的 PyTorch Transformer 架構實作，基於論文 ["Attention Is All You Need"](https://arxiv.org/abs/1706.03762)。
 
-This project bridges the gap between understanding transformers conceptually and implementing them professionally. It demonstrates:
+## 為什麼要做這個專案
 
-- ✅ **Deep understanding** - Built from scratch, not just using `transformers` library
-- ✅ **Production practices** - Modular code, type hints, unit tests, proper documentation
-- ✅ **Clean architecture** - Each component is isolated, tested, and reusable
-- ✅ **Portfolio-ready** - Shows AI engineering skills, not just tutorial following
+這個專案連接了「理解 Transformer 概念」與「專業實作」之間的橋樑。它展示了：
 
-**Target audience:** Self-taught ML practitioners preparing for AI Engineer roles who need to demonstrate strong fundamentals and production coding skills.
+- ✅ **深度理解** - 從零實作，而不只是使用 `transformers` 函式庫
+- ✅ **生產實務** - 模組化程式碼、型別提示、單元測試、完整文件
+- ✅ **簡潔架構** - 每個元件都是獨立、可測試、可重用的
+- ✅ **作品集就緒** - 展示 AI 工程技能，而不只是跟著教學做
 
-## How This Differs from Other Transformer Tutorials
+**目標讀者：** 自學 ML 並準備進入 AI 工程師職位的實務工作者，需要展現紮實基礎與生產級程式碼能力。
 
-| Most Tutorials | This Repository |
-|----------------|-----------------|
-| Single Jupyter notebook | Modular Python package |
-| No tests | Unit tests for every component |
-| Minimal documentation | Comprehensive docstrings + README |
-| "Just make it work" | Production-ready code structure |
-| One messy commit | Thoughtful git history |
-| No training example | End-to-end training pipeline |
-| GPU required | CPU-friendly (small model) |
+## 與其他 Transformer 教學的差異
 
-**Philosophy:** If you can't explain it in clean, tested code, you don't understand it well enough.
+| 一般教學 | 這個專案 |
+|---------|---------|
+| 單一 Jupyter notebook | 模組化 Python 套件 |
+| 沒有測試 | 每個元件都有單元測試 |
+| 最少文件 | 完整的 docstrings + README |
+| 「只要能跑就好」 | 生產級程式碼架構 |
+| 一個凌亂的 commit | 有思考的 git 歷史紀錄 |
+| 沒有訓練範例 | 端到端訓練流程 |
+| 需要 GPU | CPU 友善（小模型）|
 
-## Project Status
+**理念：** 如果你無法用簡潔且經過測試的程式碼來解釋它，代表你還不夠理解它。
 
-🚧 **Work in Progress** - Following the development plan in [PLAN.md](PLAN.md)
+## 專案狀態
 
-- [ ] Phase 1: Foundation (Attention mechanisms)
-- [ ] Phase 2: Architecture (Encoder/Decoder)
-- [ ] Phase 3: Training (Real dataset)
-- [ ] Phase 4: Polish (Documentation & examples)
+🚧 **進行中** - 遵循 [PLAN.md](PLAN.md) 的開發計畫
 
-## Requirements
+- [x] Phase 1 部分完成：注意力機制與位置編碼
+- [ ] Phase 1：基礎（注意力機制）
+- [ ] Phase 2：架構（Encoder/Decoder）
+- [ ] Phase 3：訓練（真實資料集）
+- [ ] Phase 4：打磨（文件與範例）
+
+## 環境需求
 
 - Python 3.8+
 - PyTorch 2.0+
-- No GPU required (optimized for CPU training with small models)
+- 不需要 GPU（使用小模型在 CPU 訓練）
 
-## Quick Start
+## 快速開始
 
-*(Coming soon after Phase 1)*
+*（Phase 1 完成後提供）*
 
 ```python
 from transformer import Transformer
 
-# Initialize model
+# 初始化模型
 model = Transformer(
     src_vocab_size=10000,
     tgt_vocab_size=10000,
@@ -58,32 +61,32 @@ model = Transformer(
     num_layers=2
 )
 
-# Train or inference...
+# 訓練或推論...
 ```
 
-## Project Structure
+## 專案結構
 
 ```
 transformer-from-scratch-pytorch/
-├── transformer/              # Core implementation
-│   ├── attention.py         # Scaled dot-product & multi-head attention
-│   ├── encoder.py           # Encoder layers
-│   ├── decoder.py           # Decoder layers
+├── transformer/              # 核心實作
+│   ├── attention.py         # 縮放點積注意力與多頭注意力
+│   ├── encoder.py           # Encoder 層
+│   ├── decoder.py           # Decoder 層
 │   ├── positional_encoding.py
 │   ├── feedforward.py
-│   └── model.py             # Full transformer
-├── tests/                   # Unit tests
-├── examples/                # Usage examples
-├── PLAN.md                  # Development roadmap
-└── README.md               # This file
+│   └── model.py             # 完整 Transformer
+├── tests/                   # 單元測試
+├── examples/                # 使用範例
+├── PLAN.md                  # 開發路線圖
+└── README.md               # 本檔案
 ```
 
-## Learning Resources
+## 學習資源
 
-- **Paper:** [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
-- **Visualization:** [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/)
-- **Implementation reference:** [Annotated Transformer](http://nlp.seas.harvard.edu/annotated-transformer/)
+- **論文：** [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+- **視覺化：** [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/)
+- **實作參考：** [Annotated Transformer](http://nlp.seas.harvard.edu/annotated-transformer/)
 
-## License
+## 授權
 
-MIT License - feel free to use for learning and portfolios!
+MIT License - 歡迎用於學習和作品集！
