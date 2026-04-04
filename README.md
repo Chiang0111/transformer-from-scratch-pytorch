@@ -33,8 +33,12 @@ This project bridges the gap between understanding transformers conceptually and
 
 🚧 **Work in Progress** - Following the development plan in [PLAN.md](PLAN.md)
 
-- [ ] Phase 1: Foundation (Attention mechanisms)
-- [ ] Phase 2: Architecture (Encoder/Decoder)
+- [x] **Phase 1: Foundation** ✅ Complete (34 tests passing)
+  - Attention mechanisms
+  - Positional encoding
+  - Feedforward networks
+  - Encoder layers
+- [ ] Phase 2: Architecture (Decoder/Full Transformer)
 - [ ] Phase 3: Training (Real dataset)
 - [ ] Phase 4: Polish (Documentation & examples)
 
