@@ -32,8 +32,8 @@
 | 一般教學 | 這個專案 |
 |---------|---------|
 | 單一 Jupyter notebook | 模組化 Python 套件 |
-| 沒有測試 | 每個元件都有單元測試（35 個測試）|
-| 最少文件 | **1,500+ 行教學註解** |
+| 沒有測試 | 每個元件都有單元測試（80 個測試）|
+| 最少文件 | **2,500+ 行教學註解** |
 | 簡短的行內註解 | 程式碼內含完整學習指南 |
 | 「只要能跑就好」 | 生產級程式碼架構 |
 | 一個凌亂的 commit | 有思考的 git 歷史紀錄與詳細 commit |
@@ -62,10 +62,20 @@
    - 學習展開→轉換→壓縮的模式
    - 比較 ReLU vs GELU 激活函數
 
-4. **完整的層** (`transformer/encoder.py`)
+4. **建構 Encoder** (`transformer/encoder.py`)
    - 看所有元件如何整合
    - 理解殘差連接與層歸一化
    - 追蹤「我愛吃蘋果」通過整個編碼器
+
+5. **加入 Decoder** (`transformer/decoder.py`)
+   - 學習遮罩自注意力（因果遮罩）
+   - 理解到編碼器記憶的交叉注意力
+   - 看自回歸生成的逐步過程
+
+6. **完整模型** (`transformer/transformer.py`)
+   - 整合所有元件
+   - 訓練 vs 推論模式
+   - 從詞元到 logits 的端到端資料流
 
 **每個檔案都包含：**
 - 詳細的「為什麼」解釋
@@ -78,14 +88,21 @@
 
 🚧 **進行中** - 遵循 [PLAN.md](PLAN.md) 的開發計畫
 
-- [x] **Phase 1：基礎** ✅ 完成（35 個測試通過）
+- [x] **Phase 1：基礎** ✅ 完成
   - ✅ Attention 機制（包含完整的 Q/K/V 解釋）
   - ✅ 位置編碼（用時鐘比喻解釋 sin/cos 函數）
   - ✅ 前饋網路（用圖書館比喻說明 FFN 的角色）
   - ✅ Encoder 層（完整架構含殘差連接與正規化）
-  - ✅ **1,500+ 行教學註解** - 閱讀程式碼即可學習！
-- [ ] Phase 2：架構（Decoder/完整 Transformer）
-- [ ] Phase 3：訓練（真實資料集）
+- [x] **Phase 2：Decoder** ✅ 完成
+  - ✅ Decoder 層（遮罩自注意力 + 交叉注意力）
+  - ✅ 自回歸生成的因果遮罩
+  - ✅ Encoder-Decoder 整合測試
+- [x] **Phase 3：完整模型** ✅ 架構完成（80 個測試通過）
+  - ✅ 帶縮放的詞元嵌入
+  - ✅ 完整 Transformer 模型（Encoder + Decoder）
+  - ✅ 自回歸生成（推論模式）
+  - ✅ **2,500+ 行教學註解** - 閱讀程式碼即可學習！
+  - ⏳ 訓練迴圈與資料集（進行中）
 - [ ] Phase 4：打磨（文件與範例）
 
 ## 環境需求
@@ -96,38 +113,66 @@
 
 ## 快速開始
 
-*（Phase 1 完成後提供）*
+```bash
+# 安裝依賴
+pip install torch pytest
+
+# 執行測試驗證一切正常
+pytest tests/ -v
+
+# 使用模型
+python
+```
 
 ```python
-from transformer import Transformer
+from transformer import create_transformer
+import torch
 
-# 初始化模型
-model = Transformer(
-    src_vocab_size=10000,
-    tgt_vocab_size=10000,
-    d_model=256,
-    num_heads=4,
-    num_layers=2
+# 創建小型 Transformer（CPU 友善）
+model = create_transformer(
+    src_vocab_size=10000,  # 英文詞彙表
+    tgt_vocab_size=8000,   # 中文詞彙表
+    d_model=256,           # 比論文的 512 小
+    num_heads=4,           # 較少的頭數適合 CPU
+    num_layers=2,          # 較淺以便更快訓練
+    d_ff=1024              # 較小的 FFN
 )
 
-# 訓練或推論...
+print(f"模型參數數量：{model.count_parameters():,}")
+
+# 訓練模式：教師強迫
+src = torch.randint(0, 10000, (2, 10))  # batch=2, src_len=10
+tgt = torch.randint(0, 8000, (2, 8))    # batch=2, tgt_len=8
+logits = model(src, tgt)  # (2, 8, 8000)
+
+# 推論模式：自回歸生成
+model.eval()
+generated = model.generate(src, max_len=20, start_token=1, end_token=2)
+print(f"生成結果：{generated.shape}")  # (2, <=20)
 ```
 
 ## 專案結構
 
 ```
 transformer-from-scratch-pytorch/
-├── transformer/              # 核心實作
+├── transformer/              # 核心實作（2,500+ 行註解）
 │   ├── attention.py         # 縮放點積注意力與多頭注意力
-│   ├── encoder.py           # Encoder 層
-│   ├── decoder.py           # Decoder 層
-│   ├── positional_encoding.py
-│   ├── feedforward.py
-│   └── model.py             # 完整 Transformer
-├── tests/                   # 單元測試
-├── examples/                # 使用範例
+│   ├── positional_encoding.py  # 正弦位置嵌入
+│   ├── feedforward.py       # 位置前饋 FFN
+│   ├── encoder.py           # Encoder 層（雙向注意力）
+│   ├── decoder.py           # Decoder 層（遮罩 + 交叉注意力）
+│   ├── transformer.py       # 完整 Transformer 模型 ⭐
+│   └── __init__.py          # 公開 API
+├── tests/                   # 完整單元測試（80 個測試）
+│   ├── test_attention.py    # 7 個測試
+│   ├── test_positional_encoding.py  # 5 個測試
+│   ├── test_feedforward.py  # 8 個測試
+│   ├── test_encoder.py      # 14 個測試
+│   ├── test_decoder.py      # 20 個測試
+│   ├── test_transformer.py  # 26 個測試 ⭐
+│   └── README.md            # 測試文件
 ├── PLAN.md                  # 開發路線圖
-└── README.md               # 本檔案
+└── README.md                # 本檔案
 ```
 
 ## 學習資源
