@@ -1,10 +1,13 @@
 # Training Guide
 
-## ⚠️ IMPORTANT: Learning Rate for Small Models
+## ⚠️ CRITICAL: Two Required Changes for Small Models
 
-**The default small model (d_model=128) requires higher learning rate!**
+**You MUST use both of these or training will fail:**
 
-The Transformer LR schedule is designed for d_model=512. For smaller models, you MUST use `--lr-factor 10.0` or training will fail (model stuck at random guessing).
+1. **Higher learning rate**: `--lr-factor 10.0` (Transformer LR formula designed for d_model=512)
+2. **No label smoothing**: `--label-smoothing 0.0` (hurts performance on simple algorithmic tasks)
+
+**Without both fixes, the model will stick at random guessing!**
 
 See [Troubleshooting](#troubleshooting) section for details.
 
@@ -14,17 +17,17 @@ See [Troubleshooting](#troubleshooting) section for details.
 
 ### Train on Copy Task (Easiest)
 ```bash
-python train.py --task copy --epochs 30 --lr-factor 10.0 --warmup-steps 500
+python train.py --task copy --epochs 30 --lr-factor 10.0 --warmup-steps 500 --label-smoothing 0.0
 ```
 
 ### Train on Reverse Task (Medium)
 ```bash
-python train.py --task reverse --epochs 40 --lr-factor 10.0 --warmup-steps 1000
+python train.py --task reverse --epochs 40 --lr-factor 10.0 --warmup-steps 1000 --label-smoothing 0.0
 ```
 
 ### Train on Sort Task (Hardest)
 ```bash
-python train.py --task sort --epochs 60 --lr-factor 10.0 --warmup-steps 1500
+python train.py --task sort --epochs 60 --lr-factor 10.0 --warmup-steps 1500 --label-smoothing 0.0
 ```
 
 ---
@@ -235,7 +238,8 @@ python train.py \
   --d-model 64 \
   --num-layers 2 \
   --lr-factor 15.0 \
-  --warmup-steps 500
+  --warmup-steps 500 \
+  --label-smoothing 0.0
 ```
 
 Expected: ~80-90% sequence accuracy
@@ -252,7 +256,8 @@ python train.py \
   --d-model 128 \
   --num-layers 2 \
   --lr-factor 10.0 \
-  --warmup-steps 500
+  --warmup-steps 500 \
+  --label-smoothing 0.0
 ```
 
 Expected: ~95-100% sequence accuracy
@@ -269,7 +274,8 @@ python train.py \
   --d-model 256 \
   --num-layers 3 \
   --lr-factor 5.0 \
-  --warmup-steps 1000
+  --warmup-steps 1000 \
+  --label-smoothing 0.0
 ```
 
 Expected: ~85-95% sequence accuracy
@@ -314,10 +320,12 @@ This trains on a single batch. If it reaches loss < 0.1, your architecture is fi
 **Problem**: Loss decreases but too slowly (still >1.0 after 20 epochs)
 
 **Solutions:**
-1. **Increase learning rate**: `--lr-factor 15.0` (try higher values)
-2. **Disable label smoothing**: `--label-smoothing 0.0` (not needed for simple tasks)
+1. **Disable label smoothing**: `--label-smoothing 0.0` (**CRITICAL** for simple tasks)
+2. **Increase learning rate**: `--lr-factor 15.0` (try higher values)
 3. **Faster warmup**: `--warmup-steps 500` (for small datasets)
 4. **Disable dropout**: `--dropout 0.0` (if dataset is small)
+
+**Note:** Label smoothing (default 0.1) distributes probability mass across all tokens, making it much harder for the model to learn correct mappings on simple algorithmic tasks.
 
 ### Model Outputs Empty Sequences
 

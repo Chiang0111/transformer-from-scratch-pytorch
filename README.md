@@ -127,17 +127,17 @@ pytest tests/ -v  # 80 個測試應該通過
 
 ### 訓練模型
 ```bash
-# ⚠️ 重要：小模型需要較高的學習率（--lr-factor 10.0）
+# ⚠️ 關鍵：必須同時使用 --lr-factor 10.0 和 --label-smoothing 0.0
 # 詳見 TRAINING.md 的說明
 
 # 訓練複製任務（最簡單，CPU 上約 15 分鐘）
-python train.py --task copy --epochs 30 --lr-factor 10.0
+python train.py --task copy --epochs 30 --lr-factor 10.0 --label-smoothing 0.0
 
 # 訓練反轉任務（中等難度）
-python train.py --task reverse --epochs 40 --lr-factor 10.0
+python train.py --task reverse --epochs 40 --lr-factor 10.0 --label-smoothing 0.0
 
 # 訓練排序任務（最困難）
-python train.py --task sort --epochs 60 --lr-factor 10.0
+python train.py --task sort --epochs 60 --lr-factor 10.0 --label-smoothing 0.0
 ```
 
 **📖 完整訓練指南請參見 [TRAINING.md](TRAINING.md)**

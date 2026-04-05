@@ -76,9 +76,21 @@ python train.py \
 ```
 
 **Why these changes:**
-1. `lr-factor 10.0`: Compensates for small d_model, gives peak_lr ≈ 0.0009
-2. `warmup-steps 500`: Faster warmup for small dataset (10K samples)
-3. `label-smoothing 0.0`: Label smoothing hurts performance on simple algorithmic tasks
+
+1. **`lr-factor 10.0`**: Compensates for small d_model
+   - Transformer LR formula assumes d_model=512
+   - Smaller models need proportionally higher LR
+   - Gives peak_lr ≈ 0.0039 (vs 0.000176 with default)
+
+2. **`warmup-steps 500`**: Faster warmup for small datasets
+   - Default 4000 is for large datasets
+   - Small datasets (5K-10K samples) converge faster
+
+3. **`label-smoothing 0.0`**: **CRITICAL - Must be disabled!**
+   - Label smoothing (default 0.1) distributes probability: 90% correct, 10% across other 19 tokens
+   - Makes it harder to learn correct mappings on simple tasks
+   - Useful for large-vocab tasks (translation) but **KILLS performance** on algorithmic tasks
+   - **Even with correct LR (10.0), training STILL FAILS if label smoothing is 0.1!**
 
 ### Expected Results with Corrected Hyperparameters
 
@@ -99,7 +111,7 @@ Based on overfitting test, the model should:
 
 ### Quick Test (5 min)
 ```bash
-python train.py --task copy --epochs 10 --lr-factor 15.0 --warmup-steps 200
+python train.py --task copy --epochs 10 --lr-factor 15.0 --warmup-steps 200 --label-smoothing 0.0
 ```
 
 ### Full Copy Task (15 min)
@@ -110,10 +122,10 @@ python train.py --task copy --epochs 30 --lr-factor 10.0 --warmup-steps 500 --la
 ### Harder Tasks (30-60 min)
 ```bash
 # Reverse
-python train.py --task reverse --epochs 40 --lr-factor 10.0 --warmup-steps 1000
+python train.py --task reverse --epochs 40 --lr-factor 10.0 --warmup-steps 1000 --label-smoothing 0.0
 
 # Sort  
-python train.py --task sort --epochs 60 --lr-factor 10.0 --warmup-steps 1500
+python train.py --task sort --epochs 60 --lr-factor 10.0 --warmup-steps 1500 --label-smoothing 0.0
 ```
 
 ## Files for Debugging
