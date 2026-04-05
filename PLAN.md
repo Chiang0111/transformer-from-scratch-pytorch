@@ -46,29 +46,48 @@ Build a production-ready transformer implementation that demonstrates:
 **Goal:** Assemble the full transformer model
 
 ### Tasks
-- [ ] Implement encoder layer
+- [x] Implement encoder layer
   - Multi-head attention
   - Add & Norm
   - Feedforward
   - Add & Norm
-- [ ] Implement decoder layer
+- [x] Implement decoder layer
   - Masked self-attention
   - Cross-attention to encoder
   - Feedforward
   - All residual connections
-- [ ] Stack encoder and decoder layers
-- [ ] Add embedding layers and final linear projection
-- [ ] Test full forward pass with dummy data
-- [ ] Write tests for each layer
+- [x] Stack encoder and decoder layers
+- [x] Add embedding layers and final linear projection
+- [x] Test full forward pass with dummy data
+- [x] Write tests for each layer
+
+**✅ Phase 2 Complete! 54 unit tests passing (1 skipped)**
 
 **Commits:** One commit per layer type
 
 ---
 
-## Phase 3: Training (Week 3)
+## Phase 3: Complete Model & Training (Week 3)
 **Goal:** Make it actually work on real data
 
-### Tasks
+### Completed
+- [x] Implement complete Transformer model
+  - TokenEmbedding layer with sqrt(d_model) scaling
+  - Integrated Encoder and Decoder
+  - encode(), decode(), forward() methods
+  - generate() method for autoregressive inference
+  - create_transformer() factory function
+- [x] Write 26 comprehensive unit tests
+  - Token embedding tests
+  - Model initialization tests
+  - Encoding/decoding tests
+  - Forward pass with gradient tests
+  - Autoregressive generation tests
+  - End-to-end integration tests
+
+**✅ Total: 80 unit tests passing (1 skipped)**
+
+### Remaining Tasks
 - [ ] Prepare lightweight dataset
   - Small translation task (English→French)
   - Or number sequence tasks (e.g., reverse, sort)
