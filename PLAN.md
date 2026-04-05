@@ -46,29 +46,48 @@
 **目標：** 組裝完整的 Transformer 模型
 
 ### 任務
-- [ ] 實作 Encoder 層
+- [x] 實作 Encoder 層
   - 多頭注意力
   - Add & Norm
   - 前饋網路
   - Add & Norm
-- [ ] 實作 Decoder 層
+- [x] 實作 Decoder 層
   - 遮罩自注意力（Masked Self-Attention）
   - 交叉注意力到 Encoder（Cross-Attention）
   - 前饋網路
   - 所有殘差連接
-- [ ] 堆疊 Encoder 和 Decoder 層
-- [ ] 加入嵌入層和最終線性投影
-- [ ] 用假資料測試完整前向傳播
-- [ ] 為每個層撰寫測試
+- [x] 堆疊 Encoder 和 Decoder 層
+- [x] 加入嵌入層和最終線性投影
+- [x] 用假資料測試完整前向傳播
+- [x] 為每個層撰寫測試
+
+**✅ Phase 2 完成！54 個單元測試全部通過（1 個跳過）**
 
 **Commits：** 每種層一個 commit
 
 ---
 
-## Phase 3：訓練（第 3 週）
+## Phase 3：完整模型與訓練（第 3 週）
 **目標：** 讓它在真實資料上實際運作
 
-### 任務
+### 已完成
+- [x] 實作完整 Transformer 模型
+  - TokenEmbedding 層（帶 sqrt(d_model) 縮放）
+  - 整合 Encoder 和 Decoder
+  - encode()、decode()、forward() 方法
+  - generate() 方法用於自回歸推論
+  - create_transformer() 工廠函數
+- [x] 撰寫 26 個全面單元測試
+  - 詞元嵌入測試
+  - 模型初始化測試
+  - 編碼/解碼測試
+  - 前向傳播與梯度測試
+  - 自回歸生成測試
+  - 端到端整合測試
+
+**✅ 總計：80 個單元測試全部通過（1 個跳過）**
+
+### 待完成任務
 - [ ] 準備輕量資料集
   - 小型翻譯任務（英文→法文）
   - 或數字序列任務（如：反轉、排序）
