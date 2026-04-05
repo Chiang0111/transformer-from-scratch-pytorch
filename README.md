@@ -37,7 +37,7 @@ This project bridges the gap between understanding transformers conceptually and
 | Brief inline comments | Complete learning guide in the code |
 | "Just make it work" | Production-ready code structure |
 | One messy commit | Thoughtful git history with detailed commits |
-| No training example | End-to-end training pipeline (coming) |
+| No training example | **Complete training pipeline** ✅ |
 | GPU required | CPU-friendly (small model) |
 | Code only | Code + intuitive analogies + visual diagrams |
 
@@ -56,12 +56,14 @@ This project bridges the gap between understanding transformers conceptually and
   - ✅ Decoder layers (masked self-attention + cross-attention)
   - ✅ Causal masking for autoregressive generation
   - ✅ Encoder-Decoder integration tests
-- [x] **Phase 3: Complete Model** ✅ Architecture Complete (80 tests passing)
+- [x] **Phase 3: Complete Model & Training** ✅ Complete (80 tests passing)
   - ✅ Token embeddings with scaling
   - ✅ Full Transformer model (Encoder + Decoder)
   - ✅ Autoregressive generation (inference mode)
+  - ✅ **Training infrastructure** - datasets, utils, training loop
+  - ✅ **3 training tasks** - Copy, Reverse, Sort (no external data!)
+  - ✅ **Complete training guide** - See [TRAINING.md](TRAINING.md)
   - ✅ **2,500+ lines of educational comments** - Learn by reading the code!
-  - ⏳ Training loop & dataset (in progress)
 - [ ] Phase 4: Polish (Documentation & examples)
 
 ## 📖 How to Learn from This Repository
@@ -113,17 +115,29 @@ This project bridges the gap between understanding transformers conceptually and
 
 ## Quick Start
 
+### Installation
 ```bash
-# Install dependencies
 pip install torch pytest
-
-# Run tests to verify everything works
-pytest tests/ -v
-
-# Use the model
-python
 ```
 
+### Run Tests
+```bash
+pytest tests/ -v  # 80 tests should pass
+```
+
+### Train a Model
+```bash
+# Train on copy task (easiest, ~15 minutes on CPU)
+python train.py --task copy --epochs 30
+
+# Train on reverse task (medium difficulty)
+python train.py --task reverse --epochs 40
+
+# Train on sort task (hardest)
+python train.py --task sort --epochs 60
+```
+
+### Use the Model
 ```python
 from transformer import create_transformer
 import torch
@@ -151,6 +165,17 @@ generated = model.generate(src, max_len=20, start_token=1, end_token=2)
 print(f"Generated: {generated.shape}")  # (2, <=20)
 ```
 
+### Test Trained Model
+```bash
+# Evaluate on test set
+python test.py --checkpoint checkpoints/checkpoint_best.pt --task copy
+
+# Interactive testing
+python test.py --checkpoint checkpoints/checkpoint_best.pt --task copy --interactive
+```
+
+See [TRAINING.md](TRAINING.md) for detailed training guide.
+
 ## Project Structure
 
 ```
@@ -171,6 +196,11 @@ transformer-from-scratch-pytorch/
 │   ├── test_decoder.py      # 20 tests
 │   ├── test_transformer.py  # 26 tests ⭐
 │   └── README.md            # Test documentation
+├── datasets.py              # Training tasks (Copy/Reverse/Sort) ⭐
+├── utils.py                 # Training utilities ⭐
+├── train.py                 # Main training script ⭐
+├── test.py                  # Model evaluation ⭐
+├── TRAINING.md              # Complete training guide 📚
 ├── PLAN.md                  # Development roadmap
 └── README.md                # This file
 ```
