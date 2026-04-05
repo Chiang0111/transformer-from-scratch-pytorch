@@ -32,8 +32,8 @@ This project bridges the gap between understanding transformers conceptually and
 | Most Tutorials | This Repository |
 |----------------|-----------------|
 | Single Jupyter notebook | Modular Python package |
-| No tests | Unit tests for every component (35 tests) |
-| Minimal documentation | **1,500+ lines of educational comments** |
+| No tests | Unit tests for every component (80 tests) |
+| Minimal documentation | **2,500+ lines of educational comments** |
 | Brief inline comments | Complete learning guide in the code |
 | "Just make it work" | Production-ready code structure |
 | One messy commit | Thoughtful git history with detailed commits |
@@ -47,14 +47,21 @@ This project bridges the gap between understanding transformers conceptually and
 
 🚧 **Work in Progress** - Following the development plan in [PLAN.md](PLAN.md)
 
-- [x] **Phase 1: Foundation** ✅ Complete (35 tests passing)
+- [x] **Phase 1: Foundation** ✅ Complete
   - ✅ Attention mechanisms (with comprehensive Q/K/V explanations)
   - ✅ Positional encoding (sin/cos function explained with clock analogy)
   - ✅ Feedforward networks (FFN role clarified with library analogy)
   - ✅ Encoder layers (complete architecture with residual & normalization)
-  - ✅ **1,500+ lines of educational comments** - Learn by reading the code!
-- [ ] Phase 2: Architecture (Decoder/Full Transformer)
-- [ ] Phase 3: Training (Real dataset)
+- [x] **Phase 2: Decoder** ✅ Complete
+  - ✅ Decoder layers (masked self-attention + cross-attention)
+  - ✅ Causal masking for autoregressive generation
+  - ✅ Encoder-Decoder integration tests
+- [x] **Phase 3: Complete Model** ✅ Architecture Complete (80 tests passing)
+  - ✅ Token embeddings with scaling
+  - ✅ Full Transformer model (Encoder + Decoder)
+  - ✅ Autoregressive generation (inference mode)
+  - ✅ **2,500+ lines of educational comments** - Learn by reading the code!
+  - ⏳ Training loop & dataset (in progress)
 - [ ] Phase 4: Polish (Documentation & examples)
 
 ## 📖 How to Learn from This Repository
@@ -76,10 +83,20 @@ This project bridges the gap between understanding transformers conceptually and
    - Learn the expand→transform→compress pattern
    - Compare ReLU vs GELU activations
 
-4. **Complete the Layer** (`transformer/encoder.py`)
+4. **Build the Encoder** (`transformer/encoder.py`)
    - See how all components integrate
    - Understand residual connections & layer normalization
    - Follow "I love eating apples" through the entire encoder
+
+5. **Add the Decoder** (`transformer/decoder.py`)
+   - Learn masked self-attention (causal masking)
+   - Understand cross-attention to encoder memory
+   - See autoregressive generation step-by-step
+
+6. **Complete Model** (`transformer/transformer.py`)
+   - Integration of all components
+   - Training vs inference modes
+   - End-to-end data flow from tokens to logits
 
 **Every file contains:**
 - Detailed "Why" explanations
@@ -96,38 +113,66 @@ This project bridges the gap between understanding transformers conceptually and
 
 ## Quick Start
 
-*(Coming soon after Phase 1)*
+```bash
+# Install dependencies
+pip install torch pytest
+
+# Run tests to verify everything works
+pytest tests/ -v
+
+# Use the model
+python
+```
 
 ```python
-from transformer import Transformer
+from transformer import create_transformer
+import torch
 
-# Initialize model
-model = Transformer(
-    src_vocab_size=10000,
-    tgt_vocab_size=10000,
-    d_model=256,
-    num_heads=4,
-    num_layers=2
+# Create a small Transformer (CPU-friendly)
+model = create_transformer(
+    src_vocab_size=10000,  # English vocabulary
+    tgt_vocab_size=8000,   # Chinese vocabulary
+    d_model=256,           # Smaller than paper's 512
+    num_heads=4,           # Fewer heads for CPU
+    num_layers=2,          # Shallower for faster training
+    d_ff=1024              # Smaller FFN
 )
 
-# Train or inference...
+print(f"Model parameters: {model.count_parameters():,}")
+
+# Training mode: teacher forcing
+src = torch.randint(0, 10000, (2, 10))  # batch=2, src_len=10
+tgt = torch.randint(0, 8000, (2, 8))    # batch=2, tgt_len=8
+logits = model(src, tgt)  # (2, 8, 8000)
+
+# Inference mode: autoregressive generation
+model.eval()
+generated = model.generate(src, max_len=20, start_token=1, end_token=2)
+print(f"Generated: {generated.shape}")  # (2, <=20)
 ```
 
 ## Project Structure
 
 ```
 transformer-from-scratch-pytorch/
-├── transformer/              # Core implementation
+├── transformer/              # Core implementation (2,500+ lines of comments)
 │   ├── attention.py         # Scaled dot-product & multi-head attention
-│   ├── encoder.py           # Encoder layers
-│   ├── decoder.py           # Decoder layers
-│   ├── positional_encoding.py
-│   ├── feedforward.py
-│   └── model.py             # Full transformer
-├── tests/                   # Unit tests
-├── examples/                # Usage examples
+│   ├── positional_encoding.py  # Sinusoidal position embeddings
+│   ├── feedforward.py       # Position-wise FFN
+│   ├── encoder.py           # Encoder layers (bidirectional attention)
+│   ├── decoder.py           # Decoder layers (masked + cross attention)
+│   ├── transformer.py       # Complete Transformer model ⭐
+│   └── __init__.py          # Public API
+├── tests/                   # Comprehensive unit tests (80 tests)
+│   ├── test_attention.py    # 7 tests
+│   ├── test_positional_encoding.py  # 5 tests
+│   ├── test_feedforward.py  # 8 tests
+│   ├── test_encoder.py      # 14 tests
+│   ├── test_decoder.py      # 20 tests
+│   ├── test_transformer.py  # 26 tests ⭐
+│   └── README.md            # Test documentation
 ├── PLAN.md                  # Development roadmap
-└── README.md               # This file
+└── README.md                # This file
 ```
 
 ## Learning Resources
