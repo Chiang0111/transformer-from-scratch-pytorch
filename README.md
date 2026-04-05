@@ -127,17 +127,17 @@ pytest tests/ -v  # 80 tests should pass
 
 ### Train a Model
 ```bash
-# ⚠️ IMPORTANT: Small models need higher learning rate (--lr-factor 10.0)
+# ⚠️ CRITICAL: Must use BOTH --lr-factor 10.0 AND --label-smoothing 0.0
 # See TRAINING.md for details
 
 # Train on copy task (easiest, ~15 minutes on CPU)
-python train.py --task copy --epochs 30 --lr-factor 10.0
+python train.py --task copy --epochs 30 --lr-factor 10.0 --label-smoothing 0.0
 
 # Train on reverse task (medium difficulty)
-python train.py --task reverse --epochs 40 --lr-factor 10.0
+python train.py --task reverse --epochs 40 --lr-factor 10.0 --label-smoothing 0.0
 
 # Train on sort task (hardest)
-python train.py --task sort --epochs 60 --lr-factor 10.0
+python train.py --task sort --epochs 60 --lr-factor 10.0 --label-smoothing 0.0
 ```
 
 **📖 See [TRAINING.md](TRAINING.md) for complete training guide**
