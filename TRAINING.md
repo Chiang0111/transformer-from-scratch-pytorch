@@ -1,20 +1,30 @@
 # Training Guide
 
+## ⚠️ IMPORTANT: Learning Rate for Small Models
+
+**The default small model (d_model=128) requires higher learning rate!**
+
+The Transformer LR schedule is designed for d_model=512. For smaller models, you MUST use `--lr-factor 10.0` or training will fail (model stuck at random guessing).
+
+See [Troubleshooting](#troubleshooting) section for details.
+
+---
+
 ## 🎯 Quick Start
 
 ### Train on Copy Task (Easiest)
 ```bash
-python train.py --task copy --epochs 30 --batch-size 64
+python train.py --task copy --epochs 30 --lr-factor 10.0 --warmup-steps 500
 ```
 
 ### Train on Reverse Task (Medium)
 ```bash
-python train.py --task reverse --epochs 40 --batch-size 64
+python train.py --task reverse --epochs 40 --lr-factor 10.0 --warmup-steps 1000
 ```
 
 ### Train on Sort Task (Hardest)
 ```bash
-python train.py --task sort --epochs 60 --batch-size 64
+python train.py --task sort --epochs 60 --lr-factor 10.0 --warmup-steps 1500
 ```
 
 ---
@@ -68,41 +78,56 @@ Output: [3, 5, 7, 9]
 
 **Small (Fast, CPU-friendly):**
 ```bash
-python train.py --d-model 64 --num-layers 2 --num-heads 4 --d-ff 256
+python train.py --d-model 64 --num-layers 2 --num-heads 4 --d-ff 256 --lr-factor 15.0
 ```
 - ~0.4M parameters
 - Trains in 5-10 min
 - Good for testing
+- **Needs lr-factor 15.0**
 
 **Medium (Balanced):**
 ```bash
-python train.py --d-model 128 --num-layers 2 --num-heads 4 --d-ff 512
+python train.py --d-model 128 --num-layers 2 --num-heads 4 --d-ff 512 --lr-factor 10.0
 ```
 - ~1M parameters  
 - Trains in 10-20 min
 - Recommended default
+- **Needs lr-factor 10.0**
 
 **Large (Better accuracy):**
 ```bash
-python train.py --d-model 256 --num-layers 4 --num-heads 8 --d-ff 1024
+python train.py --d-model 256 --num-layers 4 --num-heads 8 --d-ff 1024 --lr-factor 5.0
 ```
 - ~10M parameters
 - Trains in 30-60 min
 - Best results
+- **Needs lr-factor 5.0**
 
 ### Learning Rate
 
 The model uses Transformer LR schedule with warmup:
 
 ```bash
---warmup-steps 500   # Lower for small datasets
---warmup-steps 2000  # Higher for large datasets
---lr-factor 1.0      # Scale overall learning rate
+lr = d_model^(-0.5) * min(step^(-0.5), step * warmup^(-1.5)) * lr_factor
 ```
 
-**Tips:**
-- If loss doesn't decrease: increase `--lr-factor`
-- If training is unstable: decrease `--lr-factor` or increase `--warmup-steps`
+**CRITICAL: The formula assumes d_model=512 (from the paper).** For smaller models, you MUST scale up the learning rate:
+
+```bash
+# For d_model=64:  --lr-factor 15.0
+# For d_model=128: --lr-factor 10.0
+# For d_model=256: --lr-factor 5.0
+# For d_model=512: --lr-factor 2.0 (original paper scale)
+```
+
+**Warmup Steps:**
+```bash
+--warmup-steps 500   # Good for small datasets (5K-10K samples)
+--warmup-steps 1000  # Good for medium datasets (10K-50K samples)
+--warmup-steps 2000  # Good for large datasets (50K+ samples)
+```
+
+**⚠️ Warning:** If you use the default `--lr-factor 2.0` with small models, training will fail (model stuck at random guessing). See troubleshooting section.
 
 ### Data Size
 
@@ -208,7 +233,9 @@ python train.py \
   --num-samples 2000 \
   --batch-size 64 \
   --d-model 64 \
-  --num-layers 2
+  --num-layers 2 \
+  --lr-factor 15.0 \
+  --warmup-steps 500
 ```
 
 Expected: ~80-90% sequence accuracy
@@ -224,7 +251,8 @@ python train.py \
   --batch-size 64 \
   --d-model 128 \
   --num-layers 2 \
-  --warmup-steps 1000
+  --lr-factor 10.0 \
+  --warmup-steps 500
 ```
 
 Expected: ~95-100% sequence accuracy
@@ -240,7 +268,8 @@ python train.py \
   --batch-size 64 \
   --d-model 256 \
   --num-layers 3 \
-  --warmup-steps 2000
+  --lr-factor 5.0 \
+  --warmup-steps 1000
 ```
 
 Expected: ~85-95% sequence accuracy
@@ -249,24 +278,57 @@ Expected: ~85-95% sequence accuracy
 
 ## 🐛 Troubleshooting
 
-### Model Not Learning (Loss Not Decreasing)
+### CRITICAL: Model Stuck at Random Guessing ⚠️
 
-**Problem**: Loss stays high or increases
+**Symptoms:**
+- Loss stays around 2.9-3.0 (close to -log(1/20) = 2.996)
+- Token accuracy around 5-15% (random guessing)
+- Sequence accuracy stays at 0%
+- Model generates empty sequences `[]` or END token immediately
+- Perplexity near vocab_size (e.g., 18-20 for vocab_size=20)
+
+**Root Cause:**
+Learning rate is **WAY TOO LOW** for small models. The Transformer LR formula `lr = d_model^(-0.5) * ...` assumes d_model=512 from the original paper.
+
+**Solution:**
+```bash
+# For d_model=128 (default small model):
+python train.py --task copy --epochs 30 --lr-factor 10.0 --warmup-steps 500
+
+# For d_model=64:
+python train.py --task copy --epochs 30 --lr-factor 15.0 --warmup-steps 500
+
+# For d_model=256:
+python train.py --task copy --epochs 30 --lr-factor 5.0 --warmup-steps 1000
+```
+
+**How to Verify:**
+Run the overfitting test to confirm your setup works:
+```bash
+python test_overfit.py
+```
+This trains on a single batch. If it reaches loss < 0.1, your architecture is fine and you just need to adjust hyperparameters.
+
+### Model Not Learning (Loss Decreasing Slowly)
+
+**Problem**: Loss decreases but too slowly (still >1.0 after 20 epochs)
 
 **Solutions:**
-1. Increase learning rate: `--lr-factor 2.0` or `--lr-factor 5.0`
-2. Reduce model size if overfitting: `--d-model 64 --num-layers 2`
-3. Increase dataset size: `--num-samples 20000`
-4. Train longer: `--epochs 50`
+1. **Increase learning rate**: `--lr-factor 15.0` (try higher values)
+2. **Disable label smoothing**: `--label-smoothing 0.0` (not needed for simple tasks)
+3. **Faster warmup**: `--warmup-steps 500` (for small datasets)
+4. **Disable dropout**: `--dropout 0.0` (if dataset is small)
 
-### Model Outputs Same Token Repeatedly
+### Model Outputs Empty Sequences
 
-**Problem**: Generates `[8, 8, 8, 8, ...]`
+**Problem**: Generates `[]` or just START/END tokens
+
+**Root Cause**: Model predicts END token immediately (learning rate too low)
 
 **Solutions:**
-1. Train longer - this is normal in early epochs
-2. Increase warmup: `--warmup-steps 2000`
-3. Check generation test after more epochs (epoch 20+)
+1. **Increase lr-factor to 10.0 or higher** (most common fix)
+2. Check generation only after epoch 10+ (early epochs are random)
+3. Verify with `python test_overfit.py` that architecture works
 
 ### Training Too Slow
 
