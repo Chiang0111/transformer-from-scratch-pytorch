@@ -37,7 +37,7 @@
 | 簡短的行內註解 | 程式碼內含完整學習指南 |
 | 「只要能跑就好」 | 生產級程式碼架構 |
 | 一個凌亂的 commit | 有思考的 git 歷史紀錄與詳細 commit |
-| 沒有訓練範例 | 端到端訓練流程（即將推出）|
+| 沒有訓練範例 | **完整訓練流程** ✅ |
 | 需要 GPU | CPU 友善（小模型）|
 | 只有程式碼 | 程式碼 + 直覺比喻 + 視覺化圖表 |
 
@@ -97,12 +97,14 @@
   - ✅ Decoder 層（遮罩自注意力 + 交叉注意力）
   - ✅ 自回歸生成的因果遮罩
   - ✅ Encoder-Decoder 整合測試
-- [x] **Phase 3：完整模型** ✅ 架構完成（80 個測試通過）
+- [x] **Phase 3：完整模型與訓練** ✅ 完成（80 個測試通過）
   - ✅ 帶縮放的詞元嵌入
   - ✅ 完整 Transformer 模型（Encoder + Decoder）
   - ✅ 自回歸生成（推論模式）
+  - ✅ **訓練基礎設施** - 資料集、工具、訓練迴圈
+  - ✅ **3 個訓練任務** - 複製、反轉、排序（不需要外部資料！）
+  - ✅ **完整訓練指南** - 參見 [TRAINING.md](TRAINING.md)
   - ✅ **2,500+ 行教學註解** - 閱讀程式碼即可學習！
-  - ⏳ 訓練迴圈與資料集（進行中）
 - [ ] Phase 4：打磨（文件與範例）
 
 ## 環境需求
@@ -113,17 +115,29 @@
 
 ## 快速開始
 
+### 安裝
 ```bash
-# 安裝依賴
 pip install torch pytest
-
-# 執行測試驗證一切正常
-pytest tests/ -v
-
-# 使用模型
-python
 ```
 
+### 執行測試
+```bash
+pytest tests/ -v  # 80 個測試應該通過
+```
+
+### 訓練模型
+```bash
+# 訓練複製任務（最簡單，CPU 上約 15 分鐘）
+python train.py --task copy --epochs 30
+
+# 訓練反轉任務（中等難度）
+python train.py --task reverse --epochs 40
+
+# 訓練排序任務（最困難）
+python train.py --task sort --epochs 60
+```
+
+### 使用模型
 ```python
 from transformer import create_transformer
 import torch
@@ -151,6 +165,17 @@ generated = model.generate(src, max_len=20, start_token=1, end_token=2)
 print(f"生成結果：{generated.shape}")  # (2, <=20)
 ```
 
+### 測試已訓練的模型
+```bash
+# 在測試集上評估
+python test.py --checkpoint checkpoints/checkpoint_best.pt --task copy
+
+# 互動測試
+python test.py --checkpoint checkpoints/checkpoint_best.pt --task copy --interactive
+```
+
+參見 [TRAINING.md](TRAINING.md) 獲取詳細訓練指南。
+
 ## 專案結構
 
 ```
@@ -171,6 +196,11 @@ transformer-from-scratch-pytorch/
 │   ├── test_decoder.py      # 20 個測試
 │   ├── test_transformer.py  # 26 個測試 ⭐
 │   └── README.md            # 測試文件
+├── datasets.py              # 訓練任務（複製/反轉/排序）⭐
+├── utils.py                 # 訓練工具 ⭐
+├── train.py                 # 主訓練腳本 ⭐
+├── test.py                  # 模型評估 ⭐
+├── TRAINING.md              # 完整訓練指南 📚
 ├── PLAN.md                  # 開發路線圖
 └── README.md                # 本檔案
 ```
