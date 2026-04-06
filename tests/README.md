@@ -1,44 +1,44 @@
-# 測試套件文檔
+# 測試套件說明文件
 
-本目錄包含 Transformer 實現的完整單元測試。
+本目錄包含 Transformer 實作的完整單元測試集。
 
 ## 概述
 
-測試套件確保所有 Transformer 組件的正確性、可靠性和可維護性。每個模組都有廣泛的測試覆蓋，驗證：
+測試套件確保所有 Transformer 元件的正確性、可靠性和可維護性。每個模組都有廣泛的測試覆蓋範圍，驗證：
 
-- **形狀正確性**：所有張量操作產生預期的維度
-- **數值正確性**：注意力權重、歸一化等按預期工作
-- **梯度流動**：反向傳播通過所有層工作
-- **邊緣情況**：掩碼、可變長度、不同配置
+- **形狀正確性**：所有張量運算產生預期的維度
+- **數值正確性**：注意力權重、歸一化等按照預期運作
+- **梯度流動**：反向傳播能夠通過所有層級
+- **邊界情況**：遮罩（mask）、可變長度、不同設定
 
-**當前狀態**：55 個測試（54 個通過，1 個跳過）- 100% 核心功能通過
+**目前狀態**：55 個測試（54 個通過，1 個跳過）- 100% 核心功能通過
 
-## 運行測試
+## 執行測試
 
-### 運行所有測試
+### 執行所有測試
 ```bash
-# 從專案根目錄
+# 從專案根目錄執行
 pytest tests/ -v
 
-# 帶覆蓋率報告
+# 帶測試覆蓋率報告
 pytest tests/ --cov=transformer --cov-report=html
 ```
 
-### 運行特定測試檔案
+### 執行特定測試檔案
 ```bash
-# 僅測試注意力機制
+# 只測試注意力機制
 pytest tests/test_attention.py -v
 
-# 僅測試解碼器
+# 只測試解碼器
 pytest tests/test_decoder.py -v
 
-# 僅測試編碼器
+# 只測試編碼器
 pytest tests/test_encoder.py -v
 ```
 
-### 運行特定測試類別或函數
+### 執行特定測試類別或函數
 ```bash
-# 僅測試多頭注意力
+# 只測試多頭注意力
 pytest tests/test_attention.py::TestMultiHeadAttention -v
 
 # 測試特定函數
@@ -50,13 +50,13 @@ pytest tests/test_decoder.py::TestDecoderLayer::test_gradient_flow -v
 # 在第一個失敗時停止
 pytest tests/ -x
 
-# 失敗時顯示局部變量
+# 失敗時顯示區域變數
 pytest tests/ -l
 
-# 並行運行測試（更快）
+# 並行執行測試（更快）
 pytest tests/ -n auto
 
-# 顯示 print 語句
+# 顯示 print 輸出
 pytest tests/ -s
 ```
 
