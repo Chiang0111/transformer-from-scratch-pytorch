@@ -48,7 +48,7 @@ def interactive_test(model, vocab_size, device, start_token, end_token, task):
     model.eval()
 
     print("\n" + "="*60)
-    print("🎮 INTERACTIVE MODE")
+    print("INTERACTIVE MODE")
     print("="*60)
     print(f"Task: {task}")
     print("Enter sequences as space-separated numbers (3-19)")
@@ -68,7 +68,7 @@ def interactive_test(model, vocab_size, device, start_token, end_token, task):
 
             # Validate tokens
             if not all(3 <= t < vocab_size for t in tokens):
-                print(f"❌ Error: All tokens must be between 3 and {vocab_size-1}")
+                print(f"[X] Error: All tokens must be between 3 and {vocab_size-1}")
                 continue
 
             # Create tensor
@@ -87,7 +87,7 @@ def interactive_test(model, vocab_size, device, start_token, end_token, task):
                              if x not in [0, start_token, end_token]]
 
             # Show result
-            print(f"✨ Output: {' '.join(map(str, generated_clean))}")
+            print(f"> Output: {' '.join(map(str, generated_clean))}")
 
             # Show expected for this task
             if task == 'copy':
@@ -101,17 +101,17 @@ def interactive_test(model, vocab_size, device, start_token, end_token, task):
 
             if expected:
                 is_correct = generated_clean == expected
-                status = "✅ CORRECT!" if is_correct else "❌ Wrong"
+                status = "[OK] CORRECT!" if is_correct else "[X] Wrong"
                 print(f"{status} (Expected: {' '.join(map(str, expected))})")
 
             print()
 
         except ValueError:
-            print("❌ Invalid input. Use space-separated numbers.\n")
+            print("[X] Invalid input. Use space-separated numbers.\n")
         except KeyboardInterrupt:
             break
 
-    print("\n👋 Goodbye!")
+    print("\nGoodbye!")
 
 
 def main():
@@ -138,11 +138,11 @@ def main():
     # Set device
     device = args.device
     if device == 'cuda' and not torch.cuda.is_available():
-        print("⚠️  CUDA not available, using CPU")
+        print("[!] CUDA not available, using CPU")
         device = 'cpu'
 
     print("\n" + "="*60)
-    print("🧪 TRANSFORMER MODEL TESTING")
+    print("TRANSFORMER MODEL TESTING")
     print("="*60 + "\n")
 
     # Load config if available
@@ -152,10 +152,10 @@ def main():
     if config_path.exists():
         with open(config_path) as f:
             config = json.load(f)
-        print("✅ Loaded config from training")
+        print("[OK] Loaded config from training")
         model_config = config['model']
     else:
-        print("⚠️  No config found, using defaults")
+        print("[!] No config found, using defaults")
         model_config = {
             'd_model': 128,
             'num_heads': 4,
@@ -185,20 +185,20 @@ def main():
     print()
 
     # Test on dataset
-    print("📊 Testing on dataset...")
-    # Use train_split=0, val_split=0 so all data goes to test set
+    print("Testing on dataset...")
+    # Create fresh test data (not from training/validation)
     _, _, test_loader, dataset_info = create_dataloader(
         dataset_type=args.task,
         batch_size=args.batch_size,
         num_samples=args.num_samples,
         vocab_size=model_config['vocab_size'],
-        train_split=0.0,  # No training data
-        val_split=0.0     # No validation data (all goes to test)
+        train_split=0.8,
+        val_split=0.1
     )
 
     metrics = test_model(model, test_loader, device, dataset_info['pad_token'])
 
-    print(f"✅ Test Results:")
+    print(f"[OK] Test Results:")
     print(f"   Loss: {metrics['loss']:.4f}")
     print(f"   Token Accuracy: {metrics['token_accuracy']:.2f}%")
     print(f"   Sequence Accuracy: {metrics['sequence_accuracy']:.2f}%")
