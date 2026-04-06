@@ -1,0 +1,26 @@
+{
+  "timestamp": "20260406_161229",
+  "passed": 1,
+  "failed": 2,
+  "total_time": 7830.989550828934,
+  "results": {
+    "copy": {
+      "status": "passed",
+      "accuracy": 99.0,
+      "metric_source": "test",
+      "target": 95.0,
+      "passed": true,
+      "time": 631.0022718906403
+    },
+    "reverse": {
+      "status": "timeout",
+      "time": 3600.0195388793945,
+      "target": 80.0
+    },
+    "sort": {
+      "status": "timeout",
+      "time": 3599.967740058899,
+      "target": 65.0
+    }
+  }
+}

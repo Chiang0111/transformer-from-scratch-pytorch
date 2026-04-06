@@ -36,9 +36,9 @@ Thumbs.db
 *.tmp
 *.bak
 
-# Documentation review (internal)
-DOCUMENTATION_REVIEW.md
-OPEN_SOURCE_CHECKLIST.md
+# Documentation archive (internal development notes)
+docs/archive/
 
-# Benchmark results (optional - remove this line if you want to commit benchmarks)
-benchmark_results/
+# Checkpoints from user training (keep benchmarks/ for pre-trained models)
+checkpoints/*
+!checkpoints/.gitkeep

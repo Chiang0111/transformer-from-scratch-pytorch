@@ -1,0 +1,27 @@
+{
+  "timestamp": "20260406_161333",
+  "passed": 1,
+  "failed": 2,
+  "total_time": 6845.900600194931,
+  "results": {
+    "copy": {
+      "status": "timeout",
+      "time": 3600.2787823677063,
+      "target": 95.0
+    },
+    "reverse": {
+      "status": "passed",
+      "accuracy": 95.8,
+      "metric_source": "test",
+      "target": 80.0,
+      "passed": true,
+      "time": 3245.3415274620056
+    },
+    "sort": {
+      "status": "crashed",
+      "error": "python: can't open file 'C:\\\\Users\\\\ychiang\\\\Projects\\\\repos\\\\transformer-from-scratch-pytorch\\\\train.py': [Errno 2] No such file or directory\n",
+      "time": 0.2802903652191162,
+      "target": 65.0
+    }
+  }
+}
