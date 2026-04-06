@@ -1,20 +1,20 @@
 """
-Transformer Encoder Layer
+Transformer 編碼器層（Encoder Layer）
 
-Integrates all components:
-1. Multi-Head Self-Attention
-2. Residual Connection + Layer Normalization
-3. Position-wise Feedforward Network
-4. Residual Connection + Layer Normalization
+整合所有組件：
+1. 多頭自注意力（Multi-Head Self-Attention）
+2. 殘差連接 + 層標準化（Residual Connection + Layer Normalization）
+3. 逐位置前饋網路（Position-wise Feedforward Network）
+4. 殘差連接 + 層標準化（Residual Connection + Layer Normalization）
 
-Architecture:
-    Input
+架構：
+    輸入
      ↓
-    [Multi-Head Attention] → Add & Norm
+    [多頭注意力] → Add & Norm
      ↓
-    [Feedforward Network]  → Add & Norm
+    [前饋網路]  → Add & Norm
      ↓
-    Output
+    輸出
 """
 
 import torch
@@ -27,123 +27,123 @@ from .feedforward import PositionwiseFeedForward
 
 class EncoderLayer(nn.Module):
     """
-    Transformer Encoder Layer
+    Transformer 編碼器層（Encoder Layer）
 
-    【What Is This?】
-    This is the core building block of Transformer!
-    A complete Encoder consists of multiple EncoderLayers stacked (typically 6 layers)
+    【這是什麼？】
+    這是 Transformer 的核心組件！
+    一個完整的編碼器（Encoder）由多個 EncoderLayer 堆疊而成（通常是 6 層）
 
-    【Complete Architecture】
-    One EncoderLayer contains two sub-layers:
+    【完整架構】
+    一個 EncoderLayer 包含兩個子層（sub-layer）：
 
-    Sub-layer 1: Multi-Head Self-Attention
-        → Lets each word "see" the entire sentence, gather relevant information
+    子層 1：多頭自注意力（Multi-Head Self-Attention）
+        → 讓每個詞「看到」整個句子，蒐集相關資訊
 
-    Sub-layer 2: Position-wise FFN
-        → Independent non-linear transformation for each word
+    子層 2：逐位置前饋網路（Position-wise FFN）
+        → 對每個詞進行獨立的非線性轉換
 
-    Each sub-layer is followed by:
-        - Residual Connection: x + SubLayer(x)
-        - Layer Normalization: stabilize training
+    每個子層後面都有：
+        - 殘差連接（Residual Connection）：x + SubLayer(x)
+        - 層標準化（Layer Normalization）：穩定訓練
 
-    【Architecture Diagram】
-        Input x (batch, seq_len, d_model)
+    【架構圖】
+        輸入 x (batch, seq_len, d_model)
          ↓
         ┌─────────────────────────────┐
-        │  Multi-Head Self-Attention  │  ← Sub-layer 1: Gather information
+        │  多頭自注意力機制            │  ← 子層 1：蒐集資訊
         └─────────────────────────────┘
          ↓
-        Add & Norm  ← x + Attention(x), then normalize
+        Add & Norm  ← x + Attention(x)，然後標準化
          ↓
         ┌─────────────────────────────┐
-        │  Feedforward Network (FFN)  │  ← Sub-layer 2: Process information
+        │  前饋網路 (FFN)              │  ← 子層 2：處理資訊
         └─────────────────────────────┘
          ↓
-        Add & Norm  ← x + FFN(x), then normalize
+        Add & Norm  ← x + FFN(x)，然後標準化
          ↓
-        Output (batch, seq_len, d_model)
+        輸出 (batch, seq_len, d_model)
 
-    【Why This Order?】
-    1. Attention first: gather information
-       - Each word looks at entire sentence
-       - Finds which words are relevant
-       - Collects related information
+    【為什麼是這個順序？】
+    1. 先做注意力：蒐集資訊
+       - 每個詞看整個句子
+       - 找出哪些詞是相關的
+       - 收集相關資訊
 
-    2. FFN next: process information
-       - Non-linear transformation on collected information
-       - Extract more complex features
-       - Increase model expressiveness
+    2. 再做前饋網路：處理資訊
+       - 對收集到的資訊做非線性轉換
+       - 提取更複雜的特徵
+       - 增加模型表達能力
 
-    3. Residual + Norm at each step: stabilize training
-       - Residual: allows gradients to flow back directly, solves gradient vanishing
-       - Norm: stabilizes numerical range, speeds up convergence
+    3. 每一步都有殘差 + 標準化：穩定訓練
+       - 殘差：讓梯度可以直接回傳，解決梯度消失
+       - 標準化：穩定數值範圍，加快收斂
 
-    【What Is Residual Connection?】
-    Simple idea: output = input + transform(input)
+    【什麼是殘差連接（Residual Connection）？】
+    簡單概念：輸出 = 輸入 + 轉換(輸入)
 
-    Without residual:
-        output = F(x)
-        Problem: if F is complex (many layers), gradients vanish
+    沒有殘差：
+        輸出 = F(x)
+        問題：如果 F 很複雜（很多層），梯度會消失
 
-    With residual:
-        output = x + F(x)
-        Benefits:
-        ✓ Gradients can flow directly through x (shortcut)
-        ✓ F only needs to learn "modifications", not "reconstruction"
-        ✓ Training more stable, faster
+    有殘差：
+        輸出 = x + F(x)
+        好處：
+        ✓ 梯度可以直接通過 x 回傳（捷徑）
+        ✓ F 只需要學「修改」，不用學「重建」
+        ✓ 訓練更穩定、更快
 
-    Analogy:
-        Without residual: "Rewrite an entire article" (hard)
-        With residual: "Make edits to existing article" (easy)
+    比喻：
+        沒有殘差：「重寫整篇文章」（困難）
+        有殘差：「在現有文章上做修改」（簡單）
 
-    【What Is Layer Normalization?】
-    Purpose: Normalize each layer's output to a stable range
+    【什麼是層標準化（Layer Normalization）？】
+    目的：將每一層的輸出標準化到穩定範圍
 
-    Formula:
-        output = (x - mean) / std * gamma + beta
+    公式：
+        輸出 = (x - 平均值) / 標準差 * gamma + beta
 
-    Where:
-        mean, std: computed per sample (not across batch)
-        gamma, beta: learnable parameters
+    其中：
+        平均值、標準差：每個樣本自己算（不跨批次）
+        gamma、beta：可學習參數
 
-    Why needed?
-    - Stabilize training (prevent value explosion or vanishing)
-    - Speed up convergence
-    - Keep each layer's input distribution stable
+    為什麼需要？
+    - 穩定訓練（防止數值爆炸或消失）
+    - 加快收斂
+    - 讓每一層的輸入分佈保持穩定
 
-    【Complete Flow Example】
-    Assume input: "I love eating apples" (5 words)
-    x.shape = (1, 5, 512)  # batch=1, seq_len=5, d_model=512
+    【完整流程範例】
+    假設輸入：「我 愛 吃 蘋果」（4 個詞）
+    x.shape = (1, 4, 512)  # batch=1, seq_len=4, d_model=512
 
-    Step 1: Self-Attention
-        - Each word sees entire sentence
-        - "eating" attends to "apples" (what is eaten?)
-        - "love" attends to "I" (who loves?)
-        → attn_output.shape = (1, 5, 512)
+    步驟 1：自注意力
+        - 每個詞看整個句子
+        - 「吃」會注意到「蘋果」（吃什麼？）
+        - 「愛」會注意到「我」（誰愛？）
+        → attn_output.shape = (1, 4, 512)
 
-    Step 2: Add & Norm (first time)
-        - x = x + attn_output  (residual)
-        - x = LayerNorm(x)     (normalize)
-        → x.shape = (1, 5, 512)
+    步驟 2：Add & Norm（第一次）
+        - x = x + attn_output  (殘差)
+        - x = LayerNorm(x)     (標準化)
+        → x.shape = (1, 4, 512)
 
-    Step 3: FFN
-        - Process each word independently
-        - 512 → 2048 → 512 (expand→transform→compress)
-        → ff_output.shape = (1, 5, 512)
+    步驟 3：前饋網路
+        - 獨立處理每個詞
+        - 512 → 2048 → 512（擴展→轉換→壓縮）
+        → ff_output.shape = (1, 4, 512)
 
-    Step 4: Add & Norm (second time)
-        - x = x + ff_output  (residual)
-        - x = LayerNorm(x)   (normalize)
-        → x.shape = (1, 5, 512)
+    步驟 4：Add & Norm（第二次）
+        - x = x + ff_output  (殘差)
+        - x = LayerNorm(x)   (標準化)
+        → x.shape = (1, 4, 512)
 
-    Final output: (1, 5, 512) ← same shape as input
+    最終輸出：(1, 4, 512) ← 與輸入形狀相同
 
-    Args:
-        d_model: Model dimension (e.g., 512)
-        num_heads: Number of attention heads (e.g., 8)
-        d_ff: FFN hidden dimension (e.g., 2048, typically 4x d_model)
-        dropout: Dropout rate (default 0.1)
-        activation: FFN activation function ('relu' or 'gelu')
+    參數說明：
+        d_model: 模型維度（例如 512）
+        num_heads: 注意力頭數（例如 8）
+        d_ff: 前饋網路隱藏層維度（例如 2048，通常是 d_model 的 4 倍）
+        dropout: Dropout 比率（預設 0.1）
+        activation: 前饋網路的激活函數（'relu' 或 'gelu'）
     """
 
     def __init__(
@@ -156,65 +156,65 @@ class EncoderLayer(nn.Module):
     ):
         super().__init__()
 
-        # ========== Component 1: Multi-Head Self-Attention ==========
-        # This is the first sub-layer, responsible for "gathering information"
+        # ========== 組件 1：多頭自注意力機制 ==========
+        # 這是第一個子層，負責「蒐集資訊」
         #
-        # Self-Attention means:
-        # - Query, Key, Value all come from the same input (self-attending)
-        # - Each word in sentence can see entire sentence
-        # - Find which words are relevant
+        # Self-Attention（自注意力）的意思是：
+        # - Query、Key、Value 都來自同一個輸入（自己看自己）
+        # - 句子中的每個詞都能看到整個句子
+        # - 找出哪些詞是相關的
         #
-        # Multi-Head means:
-        # - Use multiple attention heads (num_heads)
-        # - Each head can learn different attention patterns
-        # - Example: head1 focuses on subject-verb, head2 on modifier relations...
+        # Multi-Head（多頭）的意思是：
+        # - 使用多個注意力頭（num_heads 個）
+        # - 每個頭可以學習不同的注意力模式
+        # - 例如：第 1 個頭關注主謂關係，第 2 個頭關注修飾關係...
         self.self_attention = MultiHeadAttention(d_model, num_heads)
 
-        # ========== Component 2: Position-wise Feedforward Network ==========
-        # This is the second sub-layer, responsible for "processing information"
+        # ========== 組件 2：逐位置前饋網路 ==========
+        # 這是第二個子層，負責「處理資訊」
         #
-        # Purpose:
-        # - Independent non-linear transformation for each position
-        # - Extract more complex features
-        # - Increase model expressiveness
+        # 目的：
+        # - 對每個位置做獨立的非線性轉換
+        # - 提取更複雜的特徵
+        # - 增加模型的表達能力
         #
-        # Architecture: Linear(512 → 2048) → ReLU/GELU → Dropout → Linear(2048 → 512)
+        # 架構：Linear(512 → 2048) → ReLU/GELU → Dropout → Linear(2048 → 512)
         self.feed_forward = PositionwiseFeedForward(
             d_model, d_ff, dropout, activation
         )
 
-        # ========== Components 3 & 4: Two Layer Normalization Layers ==========
-        # Why two?
-        # - Because we have two sub-layers (Attention and FFN)
-        # - Each sub-layer needs a LayerNorm
+        # ========== 組件 3 & 4：兩個層標準化層 ==========
+        # 為什麼要兩個？
+        # - 因為我們有兩個子層（Attention 和 FFN）
+        # - 每個子層都需要一個 LayerNorm
         #
-        # LayerNorm purpose:
-        # - Normalize: standardize each sample's each position to mean=0, std=1
-        # - Stabilize training: prevent value explosion or vanishing
-        # - Speed up convergence: make gradients more stable
+        # LayerNorm 的作用：
+        # - 標準化：將每個樣本的每個位置標準化為 mean=0, std=1
+        # - 穩定訓練：防止數值爆炸或消失
+        # - 加快收斂：讓梯度更穩定
         #
-        # LayerNorm vs BatchNorm difference:
-        # - BatchNorm: normalizes same feature across batch (for CNN)
-        # - LayerNorm: normalizes all features of one sample (for NLP)
-        # - Why LayerNorm in NLP? Because sentence lengths vary, batch hard to align
-        self.norm1 = nn.LayerNorm(d_model)  # For first sub-layer (Attention)
-        self.norm2 = nn.LayerNorm(d_model)  # For second sub-layer (FFN)
+        # LayerNorm vs BatchNorm 的差異：
+        # - BatchNorm：對同一特徵在批次間標準化（用於 CNN）
+        # - LayerNorm：對一個樣本的所有特徵標準化（用於 NLP）
+        # - 為什麼 NLP 用 LayerNorm？因為句子長度不同，批次難對齊
+        self.norm1 = nn.LayerNorm(d_model)  # 用於第一個子層（Attention）
+        self.norm2 = nn.LayerNorm(d_model)  # 用於第二個子層（FFN）
 
-        # ========== Components 5 & 6: Two Dropout Layers ==========
-        # Why two?
-        # - Because we have two sub-layers (Attention and FFN)
-        # - Each sub-layer's output needs Dropout (before residual)
+        # ========== 組件 5 & 6：兩個 Dropout 層 ==========
+        # 為什麼要兩個？
+        # - 因為我們有兩個子層（Attention 和 FFN）
+        # - 每個子層的輸出都需要 Dropout（在殘差連接之前）
         #
-        # Where to apply Dropout?
-        # - After sub-layer output
-        # - Before residual connection
-        # - Flow: SubLayer(x) → Dropout → x + ·
+        # Dropout 在哪裡使用？
+        # - 子層輸出之後
+        # - 殘差連接之前
+        # - 流程：SubLayer(x) → Dropout → x + ·
         #
-        # Why Dropout here?
-        # - Prevent overfitting
-        # - Make model not over-rely on certain paths
-        self.dropout1 = nn.Dropout(dropout)  # For first sub-layer (Attention)
-        self.dropout2 = nn.Dropout(dropout)  # For second sub-layer (FFN)
+        # 為什麼要在這裡 Dropout？
+        # - 防止過擬合
+        # - 讓模型不要過度依賴某些路徑
+        self.dropout1 = nn.Dropout(dropout)  # 用於第一個子層（Attention）
+        self.dropout2 = nn.Dropout(dropout)  # 用於第二個子層（FFN）
 
     def forward(
         self,
@@ -222,279 +222,278 @@ class EncoderLayer(nn.Module):
         mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
-        Encoder Layer forward pass
+        編碼器層的前向傳播
 
-        Args:
-            x: Input sequence of shape (batch_size, seq_len, d_model)
-               (typically word embeddings + positional encoding)
-            mask: Padding mask of shape (batch_size, 1, 1, seq_len) or None
-                 Used to ignore <PAD> tokens
+        參數：
+            x: 輸入序列，形狀為 (batch_size, seq_len, d_model)
+               （通常是詞嵌入 + 位置編碼）
+            mask: 填充遮罩，形狀為 (batch_size, 1, 1, seq_len) 或 None
+                 用於忽略 <PAD> 標記
 
-        Returns:
-            output: Encoder layer output of shape (batch_size, seq_len, d_model)
-                   (same dimension as input)
+        回傳：
+            output: 編碼器層輸出，形狀為 (batch_size, seq_len, d_model)
+                   （與輸入維度相同）
 
-        Complete flow:
-            1. Self-Attention: each token attends to entire sequence, gather relevant info
-            2. Add & Norm: residual connection + layer normalization
-            3. FFN: process each token independently, non-linear transformation
-            4. Add & Norm: residual connection + layer normalization
+        完整流程：
+            1. 自注意力：每個 token 關注整個序列，蒐集相關資訊
+            2. Add & Norm：殘差連接 + 層標準化
+            3. FFN：獨立處理每個 token，進行非線性轉換
+            4. Add & Norm：殘差連接 + 層標準化
 
-        Concrete example ("I love eating apples"):
-            Input x.shape = (1, 5, 512)  # batch=1, seq_len=5, d_model=512
+        具體範例（「我 愛 吃 蘋果」）：
+            輸入 x.shape = (1, 4, 512)  # batch=1, seq_len=4, d_model=512
 
-            Sub-layer 1: Self-Attention
-                - "eating" attends to "apples" (what is eaten?)
-                - "love" attends to "I" (who loves?)
-                - Each word gathers relevant information
-                → attn_output.shape = (1, 5, 512)
+            子層 1：自注意力
+                - 「吃」關注到「蘋果」（吃什麼？）
+                - 「愛」關注到「我」（誰愛？）
+                - 每個詞蒐集相關資訊
+                → attn_output.shape = (1, 4, 512)
 
             Add & Norm 1:
-                - x = x + attn_output  (residual)
-                - x = LayerNorm(x)     (normalize)
-                → x.shape = (1, 5, 512)
+                - x = x + attn_output  (殘差)
+                - x = LayerNorm(x)     (標準化)
+                → x.shape = (1, 4, 512)
 
-            Sub-layer 2: FFN
-                - Each word processed independently
-                - 512 → 2048 → 512 (expand→transform→compress)
-                → ff_output.shape = (1, 5, 512)
+            子層 2：FFN
+                - 獨立處理每個詞
+                - 512 → 2048 → 512（擴展→轉換→壓縮）
+                → ff_output.shape = (1, 4, 512)
 
             Add & Norm 2:
-                - x = x + ff_output  (residual)
-                - x = LayerNorm(x)   (normalize)
-                → x.shape = (1, 5, 512)
+                - x = x + ff_output  (殘差)
+                - x = LayerNorm(x)   (標準化)
+                → x.shape = (1, 4, 512)
 
-            Final output: (1, 5, 512)
+            最終輸出：(1, 4, 512)
         """
-        # ========== Sub-layer 1: Multi-Head Self-Attention ==========
+        # ========== 子層 1：多頭自注意力 ==========
 
-        # Step 1: Self-Attention
-        # Q = K = V = x (all three inputs are x, hence "self" attention)
+        # 步驟 1：自注意力
+        # Q = K = V = x（三個輸入都是 x，所以叫「自」注意力）
         #
-        # What does this do?
-        # - Each token in sequence can "see" entire sequence
-        # - Compute attention scores between each token pair
-        # - Gather relevant information based on attention scores
+        # 這一步在做什麼？
+        # - 序列中的每個 token 都能「看到」整個序列
+        # - 計算每對 token 之間的注意力分數
+        # - 根據注意力分數蒐集相關資訊
         #
-        # Concrete example ("I love eating apples"):
-        # - "eating" attends to:
-        #   * "apples" (high attention) ← what is eaten?
-        #   * "I" (low attention)
-        #   * "love" (low attention)
-        # - "love" attends to:
-        #   * "I" (high attention) ← who loves?
-        #   * "eating" (medium attention) ← loves to do what?
-        #   * "apples" (low attention)
+        # 具體範例（「我 愛 吃 蘋果」）：
+        # - 「吃」會關注到：
+        #   * 「蘋果」（高注意力） ← 吃什麼？
+        #   * 「我」（低注意力）
+        #   * 「愛」（低注意力）
+        # - 「愛」會關注到：
+        #   * 「我」（高注意力） ← 誰愛？
+        #   * 「吃」（中注意力） ← 愛做什麼？
+        #   * 「蘋果」（低注意力）
         #
-        # mask purpose:
-        # - If sentence has padding (like "I love eating apples<PAD><PAD>")
-        # - mask tells model: don't attend to <PAD>
-        # - Avoids model learning meaningless padding information
+        # mask 的作用：
+        # - 如果句子有填充（例如「我 愛 吃 蘋果 <PAD> <PAD>」）
+        # - mask 告訴模型：不要關注 <PAD>
+        # - 避免模型學習無意義的填充資訊
         attn_output = self.self_attention(x, x, x, mask)
         # attn_output.shape = (batch_size, seq_len, d_model)
 
-        # Step 2: Dropout + Residual Connection
+        # 步驟 2：Dropout + 殘差連接
         #
-        # First Dropout:
-        # - Training: randomly set some values to 0
-        # - Prevents overfitting
+        # 先做 Dropout：
+        # - 訓練時：隨機將一些值設為 0
+        # - 防止過擬合
         attn_output = self.dropout1(attn_output)
 
-        # Then Residual Connection:
+        # 然後做殘差連接：
         # x = x + attn_output
         #     ↑        ↑
-        #  original  attention output
-        #  input
+        #  原始輸入  注意力輸出
         #
-        # Why add original input x?
+        # 為什麼要加上原始輸入 x？
         #
-        # 1. Gradient Flow:
-        #    Without residual: gradients pass through many layers, may vanish
-        #    With residual: gradients can flow directly through x (shortcut)
-        #    → Training more stable
+        # 1. 梯度流動：
+        #    沒有殘差：梯度要經過很多層，可能會消失
+        #    有殘差：梯度可以直接通過 x 回傳（捷徑）
+        #    → 訓練更穩定
         #
-        # 2. Different Learning Objective:
-        #    Without residual: model must learn to "reconstruct" entire output
-        #    With residual: model only needs to learn "modifications" (delta)
-        #    → Learning easier
+        # 2. 學習目標不同：
+        #    沒有殘差：模型要學會「重建」整個輸出
+        #    有殘差：模型只需要學「修改」（delta）
+        #    → 學習更容易
         #
-        # 3. Preserve Information:
-        #    Even if attn_output learns poorly, x is still there
-        #    → Won't completely lose information
+        # 3. 保留資訊：
+        #    即使 attn_output 學得不好，x 還在
+        #    → 不會完全丟失資訊
         #
-        # Analogy:
-        # - Without residual: "Rewrite an entire article"
-        # - With residual: "Make edits to existing article"
-        x = x + attn_output  # This is the residual connection!
-        # x.shape = (batch_size, seq_len, d_model) ← dimension unchanged
+        # 比喻：
+        # - 沒有殘差：「重寫整篇文章」
+        # - 有殘差：「在現有文章上做修改」
+        x = x + attn_output  # 這就是殘差連接！
+        # x.shape = (batch_size, seq_len, d_model) ← 維度不變
 
-        # Step 3: Layer Normalization
+        # 步驟 3：層標準化
         #
-        # Purpose: Normalize each sample's each position
-        # Formula: output = (x - mean) / std * gamma + beta
+        # 目的：標準化每個樣本的每個位置
+        # 公式：輸出 = (x - 平均值) / 標準差 * gamma + beta
         #
-        # Why needed?
+        # 為什麼需要？
         #
-        # 1. Stabilize numerical range:
-        #    After multiple operations, values may become very large or small
-        #    → Normalize back to mean≈0, std≈1
-        #    → Prevent value explosion or vanishing
+        # 1. 穩定數值範圍：
+        #    經過多次運算後，數值可能變得很大或很小
+        #    → 標準化回 mean≈0, std≈1
+        #    → 防止數值爆炸或消失
         #
-        # 2. Speed up convergence:
-        #    Each layer's input distribution stable
-        #    → Optimizer easier to find good update direction
-        #    → Training faster
+        # 2. 加快收斂：
+        #    每一層的輸入分佈穩定
+        #    → 優化器更容易找到好的更新方向
+        #    → 訓練更快
         #
-        # 3. Layer independence:
-        #    Even if previous layer's output changes, LayerNorm adjusts it back
-        #    → Each layer can learn more independently
+        # 3. 層之間獨立：
+        #    即使上一層的輸出變化，LayerNorm 會把它調回來
+        #    → 每一層可以更獨立地學習
         x = self.norm1(x)
-        # x.shape = (batch_size, seq_len, d_model) ← dimension unchanged, but values normalized
+        # x.shape = (batch_size, seq_len, d_model) ← 維度不變，但數值被標準化了
 
-        # ========== Sub-layer 2: Position-wise Feedforward ==========
+        # ========== 子層 2：逐位置前饋網路 ==========
 
-        # Step 4: Feedforward Network
+        # 步驟 4：前饋網路
         #
-        # What does this do?
-        # - Independent non-linear transformation for each position
-        # - Unlike Attention which sees entire sequence, FFN only sees current position
-        # - But all positions share same FFN weights
+        # 這一步在做什麼？
+        # - 對每個位置做獨立的非線性轉換
+        # - 與注意力不同（注意力看整個序列），FFN 只看當前位置
+        # - 但所有位置共享同一個 FFN 的權重
         #
-        # Architecture:
+        # 架構：
         # Linear(512 → 2048) → ReLU/GELU → Dropout → Linear(2048 → 512)
         #
-        # Why need FFN?
-        # - Attention only "rearranges" information (weighted average)
-        # - FFN provides "non-linear transformation"
-        # - Allows model to learn more complex features
+        # 為什麼需要 FFN？
+        # - 注意力只是「重新排列」資訊（加權平均）
+        # - FFN 提供「非線性轉換」
+        # - 讓模型能學習更複雜的特徵
         #
-        # Analogy:
-        # - Attention: Finding books in library (gathering information)
-        # - FFN: Reading and thinking (processing information)
+        # 比喻：
+        # - 注意力：在圖書館找書（蒐集資訊）
+        # - FFN：閱讀和思考（處理資訊）
         ff_output = self.feed_forward(x)
         # ff_output.shape = (batch_size, seq_len, d_model)
 
-        # Step 5: Dropout + Residual Connection (second residual)
+        # 步驟 5：Dropout + 殘差連接（第二次殘差）
         #
-        # Flow similar to above:
-        # 1. Dropout: prevents overfitting
-        # 2. Residual: x + FFN(x)
+        # 流程與上面類似：
+        # 1. Dropout：防止過擬合
+        # 2. 殘差：x + FFN(x)
         ff_output = self.dropout2(ff_output)
-        x = x + ff_output  # Second residual connection
+        x = x + ff_output  # 第二次殘差連接
         # x.shape = (batch_size, seq_len, d_model)
 
-        # Step 6: Layer Normalization (second normalization)
+        # 步驟 6：層標準化（第二次標準化）
         #
-        # Normalize again, reason same as above
+        # 再次標準化，原因同上
         x = self.norm2(x)
         # x.shape = (batch_size, seq_len, d_model)
 
-        # Final output:
-        # - shape same as input: (batch_size, seq_len, d_model)
-        # - But content has been transformed by Attention and FFN
-        # - Can continue to next EncoderLayer, or as final output
+        # 最終輸出：
+        # - 形狀與輸入相同：(batch_size, seq_len, d_model)
+        # - 但內容已經被注意力和 FFN 轉換過了
+        # - 可以繼續傳給下一個 EncoderLayer，或作為最終輸出
         return x
 
 
 class Encoder(nn.Module):
     """
-    Complete Transformer Encoder
+    完整的 Transformer 編碼器
 
-    【What Is This?】
-    This is the complete Encoder!
-    Consists of multiple EncoderLayers stacked together (original paper uses 6)
+    【這是什麼？】
+    這是完整的編碼器！
+    由多個 EncoderLayer 堆疊而成（原始論文使用 6 層）
 
-    【Architecture Diagram】
-        Input (batch, seq_len, d_model)
+    【架構圖】
+        輸入 (batch, seq_len, d_model)
          ↓
         ┌─────────────────┐
-        │  EncoderLayer 1 │  ← Layer 1: Learn basic features
+        │  EncoderLayer 1 │  ← 層 1：學習基本特徵
         └─────────────────┘
          ↓
         ┌─────────────────┐
-        │  EncoderLayer 2 │  ← Layer 2: Learn mid-level features
+        │  EncoderLayer 2 │  ← 層 2：學習中階特徵
         └─────────────────┘
          ↓
         ┌─────────────────┐
-        │  EncoderLayer 3 │  ← Layer 3: Learn high-level features
+        │  EncoderLayer 3 │  ← 層 3：學習高階特徵
         └─────────────────┘
          ↓
-           ... (more layers)
+           ...（更多層）
          ↓
         ┌─────────────────┐
-        │  EncoderLayer N │  ← Layer N: Learn most abstract features
+        │  EncoderLayer N │  ← 層 N：學習最抽象的特徵
         └─────────────────┘
          ↓
-        Layer Normalization  ← Final normalization
+        層標準化  ← 最終標準化
          ↓
-        Output (batch, seq_len, d_model)
+        輸出 (batch, seq_len, d_model)
 
-    【Why Stack Multiple Layers? What Does Depth Mean?】
+    【為什麼要堆疊多層？深度代表什麼？】
 
-    Analogy 1: Reading comprehension levels
-        Layer 1: Understand words ("cat", "sits", "mat")
-        Layer 2: Understand phrases ("sits on the mat")
-        Layer 3: Understand sentences ("The cat sits on the mat")
-        Layer N: Understand semantics (describing a scene)
+    比喻 1：閱讀理解的層次
+        層 1：理解單字（「貓」、「坐」、「墊子」）
+        層 2：理解片語（「坐在墊子上」）
+        層 3：理解句子（「貓坐在墊子上」）
+        層 N：理解語義（描述一個場景）
 
-    Analogy 2: Deep CNN (computer vision)
-        Shallow layers: learn edges, textures (simple features)
-        Middle layers: learn shapes, parts (combined features)
-        Deep layers: learn objects, scenes (abstract concepts)
+    比喻 2：深度卷積神經網路（電腦視覺）
+        淺層：學習邊緣、紋理（簡單特徵）
+        中層：學習形狀、部件（組合特徵）
+        深層：學習物體、場景（抽象概念）
 
-    Transformer depth is similar:
-        Layer 1: Local patterns
-                 - Phrases ("New York", "Apple Inc")
-                 - Basic grammar (subject-verb, verb-object)
+    Transformer 的深度也類似：
+        層 1：局部模式
+                 - 片語（「紐約」、「蘋果公司」）
+                 - 基本文法（主謂、動賓）
 
-        Layers 2-3: Mid-level patterns
-                    - Phrase structures ("Apple Inc in New York")
-                    - Semantic roles (agent, patient)
+        層 2-3：中階模式
+                    - 片語結構（「蘋果公司在紐約」）
+                    - 語義角色（施事者、受事者）
 
-        Layers 4-6: High-level semantics
-                    - Sentence-level semantics
-                    - Abstract relationships (causal, comparative)
+        層 4-6：高階語義
+                    - 句子級別的語義
+                    - 抽象關係（因果、比較）
 
-    【Are Each Layer's Parameters Independent?】
-    Yes! Each layer has its own parameters (not shared)
+    【每一層的參數是獨立的嗎？】
+    是的！每一層都有自己的參數（不共享）
 
-    - Advantage: Each layer can learn different patterns
-    - Disadvantage: More parameters (6 layers ≈ 6x parameters)
+    - 優點：每一層可以學習不同的模式
+    - 缺點：參數更多（6 層 ≈ 6 倍參數）
 
-    If parameters were shared (like Universal Transformer):
-    - Advantage: Fewer parameters
-    - Disadvantage: Limited expressiveness (each layer does similar things)
+    如果參數共享（像 Universal Transformer）：
+    - 優點：參數更少
+    - 缺點：表達能力受限（每一層做類似的事）
 
-    【Why 6 Layers in Original Paper?】
-    - This is an empirical value (from experiments)
-    - Balances performance and computational cost
-    - Deeper (12, 24 layers) may perform better, but:
-      * Higher computational cost
-      * May overfit
-      * Needs more data
+    【為什麼原始論文用 6 層？】
+    - 這是經驗值（來自實驗）
+    - 平衡效能和計算成本
+    - 更深（12、24 層）可能效果更好，但：
+      * 計算成本更高
+      * 可能過擬合
+      * 需要更多資料
 
-    Modern model layer counts:
-    - BERT-base: 12 layers
-    - BERT-large: 24 layers
-    - GPT-3: 96 layers!
+    現代模型的層數：
+    - BERT-base：12 層
+    - BERT-large：24 層
+    - GPT-3：96 層！
 
-    【Input and Output】
-    Input:
-        - Typically word embeddings + positional encoding
-        - shape: (batch_size, seq_len, d_model)
+    【輸入和輸出】
+    輸入：
+        - 通常是詞嵌入 + 位置編碼
+        - 形狀：(batch_size, seq_len, d_model)
 
-    Output:
-        - Encoded representation
-        - shape: (batch_size, seq_len, d_model) ← dimension unchanged
-        - But content has been transformed through multiple layers, rich with context
+    輸出：
+        - 編碼後的表示
+        - 形狀：(batch_size, seq_len, d_model) ← 維度不變
+        - 但內容已經過多層轉換，蘊含豐富的上下文資訊
 
-    Args:
-        num_layers: Number of encoder layers (original paper uses 6, BERT uses 12)
-        d_model: Model dimension (e.g., 512)
-        num_heads: Number of attention heads (e.g., 8)
-        d_ff: FFN hidden dimension (e.g., 2048)
-        dropout: Dropout rate (default 0.1)
-        activation: FFN activation function ('relu' or 'gelu')
+    參數說明：
+        num_layers: 編碼器層數（原始論文用 6，BERT 用 12）
+        d_model: 模型維度（例如 512）
+        num_heads: 注意力頭數（例如 8）
+        d_ff: 前饋網路隱藏層維度（例如 2048）
+        dropout: Dropout 比率（預設 0.1）
+        activation: 前饋網路的激活函數（'relu' 或 'gelu'）
     """
 
     def __init__(
@@ -508,55 +507,55 @@ class Encoder(nn.Module):
     ):
         super().__init__()
 
-        # ========== Create Multiple EncoderLayers ==========
-        # Use nn.ModuleList to store multiple layers
+        # ========== 建立多個編碼器層 ==========
+        # 使用 nn.ModuleList 來儲存多個層
         #
-        # Why nn.ModuleList?
-        # - Automatically registers all sub-modules' (layers') parameters
-        # - Lets PyTorch know these layers are part of the model
-        # - So optimizer can find and update these parameters
+        # 為什麼用 nn.ModuleList？
+        # - 自動註冊所有子模組（層）的參數
+        # - 讓 PyTorch 知道這些層是模型的一部分
+        # - 這樣優化器才能找到並更新這些參數
         #
-        # Why not regular Python list?
-        # - Regular list: PyTorch doesn't know there are parameters inside, can't train
-        # - nn.ModuleList: PyTorch auto-registers parameters, can train
+        # 為什麼不用普通的 Python list？
+        # - 普通 list：PyTorch 不知道裡面有參數，無法訓練
+        # - nn.ModuleList：PyTorch 會自動註冊參數，可以訓練
         #
-        # List comprehension:
+        # 列表推導式：
         # [EncoderLayer(...) for _ in range(num_layers)]
-        # Creates num_layers EncoderLayers
-        # Each EncoderLayer has same "structure" but independent "parameters" (random init)
+        # 建立 num_layers 個 EncoderLayer
+        # 每個 EncoderLayer 有相同的「結構」但獨立的「參數」（隨機初始化）
         #
-        # Example with num_layers=6:
-        # self.layers[0] ← Layer 1 (parameters A)
-        # self.layers[1] ← Layer 2 (parameters B, different from A)
-        # self.layers[2] ← Layer 3 (parameters C, different from A, B)
+        # 例如 num_layers=6：
+        # self.layers[0] ← 層 1（參數 A）
+        # self.layers[1] ← 層 2（參數 B，與 A 不同）
+        # self.layers[2] ← 層 3（參數 C，與 A、B 不同）
         # ...
-        # self.layers[5] ← Layer 6 (parameters F)
+        # self.layers[5] ← 層 6（參數 F）
         self.layers = nn.ModuleList([
             EncoderLayer(d_model, num_heads, d_ff, dropout, activation)
             for _ in range(num_layers)
         ])
 
-        # ========== Final Layer Normalization ==========
-        # Why one more LayerNorm at the end?
+        # ========== 最終的層標準化 ==========
+        # 為什麼最後還要再加一個 LayerNorm？
         #
-        # 1. Stabilize final output:
-        #    - After multiple layer operations, value range may be unstable
-        #    - Final LayerNorm ensures output distribution is stable
+        # 1. 穩定最終輸出：
+        #    - 經過多層運算後，數值範圍可能不穩定
+        #    - 最終的 LayerNorm 確保輸出分佈穩定
         #
-        # 2. Easier for downstream processing:
-        #    - If connecting to Decoder, Decoder's input is stable
-        #    - If connecting to classifier, classifier's input is stable
+        # 2. 方便下游處理：
+        #    - 如果要接到 Decoder，Decoder 的輸入會更穩定
+        #    - 如果要接到分類器，分類器的輸入會更穩定
         #
-        # 3. Empirically better performance:
-        #    - Original paper and BERT both add LayerNorm at the end
-        #    - This is an empirical choice
+        # 3. 實驗效果更好：
+        #    - 原始論文和 BERT 都在最後加了 LayerNorm
+        #    - 這是經驗性的選擇
         #
-        # Note:
-        # - This LayerNorm's parameters are independent
-        # - Not any EncoderLayer's internal norm1 or norm2
+        # 注意：
+        # - 這個 LayerNorm 的參數是獨立的
+        # - 不是任何一個 EncoderLayer 內部的 norm1 或 norm2
         self.norm = nn.LayerNorm(d_model)
 
-        # Store layer count (for external query)
+        # 儲存層數（方便外部查詢）
         self.num_layers = num_layers
 
     def forward(
@@ -565,105 +564,105 @@ class Encoder(nn.Module):
         mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
-        Encoder forward pass
+        編碼器的前向傳播
 
-        Args:
-            x: Input sequence of shape (batch_size, seq_len, d_model)
-               (typically word embeddings + positional encoding)
-            mask: Padding mask of shape (batch_size, 1, 1, seq_len) or None
-                 (used to ignore <PAD> tokens)
+        參數：
+            x: 輸入序列，形狀為 (batch_size, seq_len, d_model)
+               （通常是詞嵌入 + 位置編碼）
+            mask: 填充遮罩，形狀為 (batch_size, 1, 1, seq_len) 或 None
+                 （用於忽略 <PAD> 標記）
 
-        Returns:
-            output: Encoder output of shape (batch_size, seq_len, d_model)
-                   (encoded representation)
+        回傳：
+            output: 編碼器輸出，形狀為 (batch_size, seq_len, d_model)
+                   （編碼後的表示）
 
-        Complete flow:
-            Input → Layer1 → Layer2 → ... → LayerN → Norm → Output
+        完整流程：
+            輸入 → 層1 → 層2 → ... → 層N → Norm → 輸出
 
-        Concrete example ("I love eating apples"):
-            Assume num_layers = 6, d_model = 512
+        具體範例（「我 愛 吃 蘋果」）：
+            假設 num_layers = 6, d_model = 512
 
-            Input:
-                x.shape = (1, 5, 512)
-                x[0, 0, :] = "I" embedding + positional encoding
-                x[0, 1, :] = "love" embedding + positional encoding
-                x[0, 2, :] = "eating" embedding + positional encoding
-                x[0, 3, :] = "apples" embedding + positional encoding
-                x[0, 4, :] = "<END>" embedding + positional encoding
+            輸入：
+                x.shape = (1, 4, 512)
+                x[0, 0, :] = 「我」的嵌入 + 位置編碼
+                x[0, 1, :] = 「愛」的嵌入 + 位置編碼
+                x[0, 2, :] = 「吃」的嵌入 + 位置編碼
+                x[0, 3, :] = 「蘋果」的嵌入 + 位置編碼
 
-            Layer 1:
-                - Attention: each word starts attending to related words
-                - FFN: extract basic features
-                → x.shape = (1, 5, 512)
+            層 1：
+                - 注意力：每個詞開始關注相關的詞
+                - FFN：提取基本特徵
+                → x.shape = (1, 4, 512)
 
-            Layer 2:
-                - Attention: learns more complex relationships based on Layer 1
-                - FFN: extract mid-level features
-                → x.shape = (1, 5, 512)
+            層 2：
+                - 注意力：基於層 1 學習更複雜的關係
+                - FFN：提取中階特徵
+                → x.shape = (1, 4, 512)
 
-            Layers 3-6:
-                - Progressively extract more abstract features
-                - Final layer contains richest contextual information
-                → x.shape = (1, 5, 512)
+            層 3-6：
+                - 逐步提取更抽象的特徵
+                - 最後一層包含最豐富的上下文資訊
+                → x.shape = (1, 4, 512)
 
-            Final LayerNorm:
-                - Normalize final output
-                → x.shape = (1, 5, 512)
+            最終層標準化：
+                - 標準化最終輸出
+                → x.shape = (1, 4, 512)
 
-            Output:
-                x[0, 0, :] = "I" encoding (contains entire sentence context)
-                x[0, 1, :] = "love" encoding (contains entire sentence context)
-                ...
-                Each word's representation contains information from whole sentence!
+            輸出：
+                x[0, 0, :] = 「我」的編碼（包含整個句子的上下文）
+                x[0, 1, :] = 「愛」的編碼（包含整個句子的上下文）
+                x[0, 2, :] = 「吃」的編碼（包含整個句子的上下文）
+                x[0, 3, :] = 「蘋果」的編碼（包含整個句子的上下文）
+                每個詞的表示都包含了整個句子的資訊！
 
-        【Why Does Each Layer Output Same Shape?】
-        - Each layer's input and output dimensions are both d_model
-        - This allows:
-          1. Using residual connections (x + SubLayer(x))
-          2. Stacking arbitrary number of layers
-          3. Flexible composition
+        【為什麼每一層的輸出形狀都相同？】
+        - 每一層的輸入和輸出維度都是 d_model
+        - 這樣可以：
+          1. 使用殘差連接（x + SubLayer(x)）
+          2. 堆疊任意數量的層
+          3. 靈活組合
 
-        【Information Accumulates Across Layers】
-        - Layer 1 output → becomes Layer 2 input
-        - Layer 2 output → becomes Layer 3 input
+        【資訊在層之間累積】
+        - 層 1 的輸出 → 成為層 2 的輸入
+        - 層 2 的輸出 → 成為層 3 的輸入
         - ...
-        - Final layer contains information from all previous layers (cumulative effect)
+        - 最後一層包含所有前面層的資訊（累積效應）
         """
-        # ========== Pass Through Each Encoder Layer Sequentially ==========
-        # for loop executes in order:
+        # ========== 依序通過每個編碼器層 ==========
+        # for 迴圈依序執行：
         # x = layer_1(x, mask)
-        # x = layer_2(x, mask)  ← input is layer_1's output
-        # x = layer_3(x, mask)  ← input is layer_2's output
+        # x = layer_2(x, mask)  ← 輸入是 layer_1 的輸出
+        # x = layer_3(x, mask)  ← 輸入是 layer_2 的輸出
         # ...
-        # x = layer_N(x, mask)  ← input is layer_{N-1}'s output
+        # x = layer_N(x, mask)  ← 輸入是 layer_{N-1} 的輸出
         #
-        # Note:
-        # - Each layer's input is previous layer's output
-        # - x is continuously updated (overwritten)
-        # - mask stays constant (each layer uses same mask)
+        # 注意：
+        # - 每一層的輸入都是上一層的輸出
+        # - x 會不斷被更新（覆蓋）
+        # - mask 保持不變（每一層使用相同的 mask）
         for layer in self.layers:
             x = layer(x, mask)
-            # x.shape always (batch_size, seq_len, d_model)
+            # x.shape 始終是 (batch_size, seq_len, d_model)
 
-        # ========== Final Layer Normalization ==========
-        # Normalize final output
-        # Ensures output distribution is stable
+        # ========== 最終的層標準化 ==========
+        # 標準化最終輸出
+        # 確保輸出分佈穩定
         x = self.norm(x)
 
-        # Final output:
-        # - shape: (batch_size, seq_len, d_model)
-        # - Same shape as input, but content has been transformed through multiple layers
-        # - Each token's representation contains entire sequence's contextual information
-        # - This output can be:
-        #   * Connected to Decoder (in Seq2Seq tasks)
-        #   * Connected to classifier (in classification tasks)
-        #   * Used for downstream tasks (like BERT's pre-trained representations)
+        # 最終輸出：
+        # - 形狀：(batch_size, seq_len, d_model)
+        # - 與輸入形狀相同，但內容已經過多層轉換
+        # - 每個 token 的表示都包含了整個序列的上下文資訊
+        # - 這個輸出可以：
+        #   * 接到解碼器（在 Seq2Seq 任務中）
+        #   * 接到分類器（在分類任務中）
+        #   * 用於下游任務（如 BERT 的預訓練表示）
         return x
 
 
 if __name__ == "__main__":
-    # Test code
-    print("=== Testing Encoder Layer ===\n")
+    # 測試代碼
+    print("=== 測試編碼器層 ===\n")
 
     batch_size = 2
     seq_len = 10
@@ -671,25 +670,25 @@ if __name__ == "__main__":
     num_heads = 8
     d_ff = 2048
 
-    # Create single encoder layer
+    # 建立單個編碼器層
     encoder_layer = EncoderLayer(d_model, num_heads, d_ff)
 
-    # Create dummy input
+    # 建立測試輸入
     x = torch.randn(batch_size, seq_len, d_model)
-    print(f"Input shape: {x.shape}")
+    print(f"輸入形狀：{x.shape}")
 
-    # Forward pass
+    # 前向傳播
     output = encoder_layer(x)
-    print(f"Output shape: {output.shape}")
+    print(f"輸出形狀：{output.shape}")
 
-    # Test with mask
-    # Assume first 7 tokens are real, last 3 are padding
+    # 測試帶遮罩的情況
+    # 假設前 7 個 token 是真實的，後 3 個是填充
     mask = torch.ones(batch_size, 1, 1, seq_len)
-    mask[:, :, :, 7:] = 0  # Last 3 positions masked
+    mask[:, :, :, 7:] = 0  # 最後 3 個位置被遮罩
     output_with_mask = encoder_layer(x, mask)
-    print(f"Output with mask shape: {output_with_mask.shape}")
+    print(f"帶遮罩的輸出形狀：{output_with_mask.shape}")
 
-    print("\n=== Testing Full Encoder (6 layers) ===\n")
+    print("\n=== 測試完整編碼器（6 層）===\n")
 
     num_layers = 6
     encoder = Encoder(
@@ -700,9 +699,9 @@ if __name__ == "__main__":
     )
 
     output_full = encoder(x, mask)
-    print(f"Full encoder output shape: {output_full.shape}")
+    print(f"完整編碼器輸出形狀：{output_full.shape}")
 
-    # Calculate parameter count
+    # 計算參數數量
     total_params = sum(p.numel() for p in encoder.parameters())
-    print(f"\nFull encoder ({num_layers} layers) total parameters: {total_params:,}")
-    print(f"Approximately {total_params / 1e6:.1f}M parameters")
+    print(f"\n完整編碼器（{num_layers} 層）總參數量：{total_params:,}")
+    print(f"約 {total_params / 1e6:.1f}M 參數")

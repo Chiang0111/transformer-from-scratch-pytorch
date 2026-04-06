@@ -1,7 +1,7 @@
 """
-Transformer Implementation from Scratch
+Transformer 從零實現
 
-A modular, production-ready implementation of the Transformer architecture.
+模組化、可用於生產環境的 Transformer 架構實現。
 """
 
 from .attention import scaled_dot_product_attention, MultiHeadAttention

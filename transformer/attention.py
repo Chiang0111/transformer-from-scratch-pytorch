@@ -1,9 +1,9 @@
 """
-Attention Mechanisms
+注意力機制（Attention Mechanisms）
 
-This module implements:
-1. Scaled Dot-Product Attention
-2. Multi-Head Attention
+本模組實現：
+1. 縮放點積注意力（Scaled Dot-Product Attention）
+2. 多頭注意力（Multi-Head Attention）
 """
 
 import torch
@@ -14,264 +14,264 @@ from typing import Optional
 
 
 def scaled_dot_product_attention(
-    query: torch.Tensor,      # Type hint: specifies expected type
-    key: torch.Tensor,        # Python won't enforce this at runtime
-    value: torch.Tensor,      # But helps with IDE autocomplete & documentation
-    mask: Optional[torch.Tensor] = None  # Optional means can be None or Tensor
-) -> tuple[torch.Tensor, torch.Tensor]:  # Return type: tuple of 2 Tensors
+    query: torch.Tensor,      # 型別提示：指定預期的資料型別
+    key: torch.Tensor,        # Python 不會在執行時強制檢查
+    value: torch.Tensor,      # 但幫助 IDE 自動完成與文件生成
+    mask: Optional[torch.Tensor] = None  # Optional 代表可以是 None 或 Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:  # 回傳型別：包含 2 個 Tensor 的 tuple
     """
-    Scaled Dot-Product Attention - The Core of Transformer
+    縮放點積注意力 - Transformer 的核心
 
-    This is THE most important function in the entire Transformer architecture.
-    Everything else is built around this mechanism.
+    這是整個 Transformer 架構中**最重要**的函式。
+    所有其他組件都圍繞這個機制構建。
 
-    【What is Attention? Library Analogy】
-    Imagine you're in a library looking for information:
+    【什麼是注意力？圖書館類比】
+    想像你在圖書館查找資訊：
 
-    Query (Q):  "What am I looking for?"
-                (The question you want answered)
+    Query (Q):  "我在找什麼？"
+                （你想要回答的問題）
 
-    Key (K):    "What information is available?"
-                (Index cards describing each book)
+    Key (K):    "有哪些資訊可用？"
+                （描述每本書的索引卡）
 
-    Value (V):  "The actual content"
-                (The books themselves)
+    Value (V):  "實際內容"
+                （書籍本身）
 
-    Process:
-    1. Compare your query against all keys (Q·K^T)
-    2. Find which keys match best (softmax)
-    3. Retrieve corresponding values weighted by match (attention·V)
+    流程：
+    1. 將你的查詢與所有鍵值比對（Q·K^T）
+    2. 找出哪些鍵值最匹配（softmax）
+    3. 根據匹配度加權提取對應的值（attention·V）
 
-    【Concrete Example: "I love eating apples"】
-    For the word "eating":
+    【具體範例："I love eating apples"】
+    對於單字 "eating"：
 
-    Query (eating):  "I need to find the object (what is being eaten?)"
+    Query (eating):  "我需要找到賓語（吃什麼？）"
     Keys:
-      - "I":      "I'm a pronoun, subject" → low match
-      - "love":   "I'm a verb"             → low match
-      - "eating": "I'm the current word"   → medium match
-      - "apples": "I'm a noun, can be object" → HIGH MATCH!
+      - "I":      "我是代名詞，主語" → 低匹配度
+      - "love":   "我是動詞"         → 低匹配度
+      - "eating": "我是當前單字"     → 中等匹配度
+      - "apples": "我是名詞，可以是賓語" → 高匹配度！
 
-    Result: "eating" pays high attention to "apples"
+    結果："eating" 高度關注 "apples"
 
-    【The Formula】
+    【公式】
     Attention(Q, K, V) = softmax(QK^T / √d_k) V
 
-    Let's break this down:
+    讓我們拆解：
 
-    1. QK^T: Dot product between queries and keys
-       - Measures similarity/relevance
-       - Each query compares with all keys
-       - Result: attention scores matrix
+    1. QK^T：查詢與鍵值的點積
+       - 衡量相似度/相關性
+       - 每個查詢與所有鍵值比較
+       - 結果：注意力分數矩陣
 
-    2. /√d_k: Scaling factor (this is crucial!)
-       - Without scaling, scores grow large with higher dimensions
-       - Large scores → softmax saturates → gradients vanish
-       - Example: if d_k=64, we divide by √64 = 8
+    2. /√d_k：縮放因子（這很關鍵！）
+       - 沒有縮放，分數會隨著維度增大而增大
+       - 大分數 → softmax 飽和 → 梯度消失
+       - 範例：若 d_k=64，我們除以 √64 = 8
 
-    3. softmax(...): Convert scores to probability distribution
-       - Each row sums to 1
-       - High scores get close to 1, low scores close to 0
-       - Creates attention weights
+    3. softmax(...)：將分數轉換為機率分布
+       - 每一行總和為 1
+       - 高分數接近 1，低分數接近 0
+       - 產生注意力權重
 
-    4. (...) V: Weighted sum of values
-       - Use attention weights to combine values
-       - This is the actual "attending" step
+    4. (...) V：值的加權和
+       - 使用注意力權重組合值
+       - 這是實際的「關注」步驟
 
-    【Why Type Hints?】
-    Type hints like `query: torch.Tensor` are annotations that:
-    - Don't affect runtime (Python ignores them during execution)
-    - Help developers understand expected types
-    - Enable IDE autocomplete and error checking
-    - Can be validated with tools like mypy
+    【為什麼需要型別提示？】
+    型別提示如 `query: torch.Tensor` 是註解，用於：
+    - 不影響執行（Python 執行時會忽略）
+    - 幫助開發者理解預期的型別
+    - 啟用 IDE 自動完成與錯誤檢查
+    - 可以用 mypy 等工具驗證
 
-    Example:
+    範例：
     ```python
-    def add(x: int, y: int) -> int:  # Hints only, not enforced
+    def add(x: int, y: int) -> int:  # 只是提示，不強制
         return x + y
 
-    add("hello", "world")  # Python allows this! Type hints are just hints.
+    add("hello", "world")  # Python 允許！型別提示只是提示。
     ```
 
-    【Arguments】
+    【參數】
     Args:
-        query: Query tensor
-               Shape: (batch_size, num_heads, seq_len_q, d_k)
-               Example: (32, 8, 50, 64) = 32 samples, 8 heads, 50 tokens, 64 dims
+        query: 查詢張量
+               形狀：(batch_size, num_heads, seq_len_q, d_k)
+               範例：(32, 8, 50, 64) = 32 樣本，8 個頭，50 個詞，64 維
 
-        key: Key tensor
-             Shape: (batch_size, num_heads, seq_len_k, d_k)
-             Usually seq_len_k = seq_len_q (self-attention)
+        key: 鍵值張量
+             形狀：(batch_size, num_heads, seq_len_k, d_k)
+             通常 seq_len_k = seq_len_q（自注意力）
 
-        value: Value tensor
-               Shape: (batch_size, num_heads, seq_len_v, d_v)
-               Usually seq_len_v = seq_len_k and d_v = d_k
+        value: 值張量
+               形狀：(batch_size, num_heads, seq_len_v, d_v)
+               通常 seq_len_v = seq_len_k 且 d_v = d_k
 
-        mask: Optional mask tensor
-              Shape: (batch_size, 1, 1, seq_len_k) or
-                     (batch_size, 1, seq_len_q, seq_len_k)
-              Used for:
-              - Padding mask: ignore <PAD> tokens
-              - Causal mask: prevent looking at future tokens (decoder)
+        mask: 可選的遮罩張量
+              形狀：(batch_size, 1, 1, seq_len_k) 或
+                    (batch_size, 1, seq_len_q, seq_len_k)
+              用於：
+              - Padding mask：忽略 <PAD> 詞元
+              - Causal mask：防止查看未來詞元（解碼器）
 
-    【Returns】
+    【回傳值】
     Returns:
-        output: Attention-weighted output
-                Shape: (batch_size, num_heads, seq_len_q, d_v)
-                The result of attending to values
+        output: 注意力加權後的輸出
+                形狀：(batch_size, num_heads, seq_len_q, d_v)
+                關注值後的結果
 
-        attention_weights: Attention weight matrix
-                          Shape: (batch_size, num_heads, seq_len_q, seq_len_k)
-                          How much each query attends to each key
-                          Each row sums to 1 (probability distribution)
+        attention_weights: 注意力權重矩陣
+                          形狀：(batch_size, num_heads, seq_len_q, seq_len_k)
+                          每個查詢對每個鍵值的關注程度
+                          每一行總和為 1（機率分布）
 
-    【Return Type Annotation】
-    `-> tuple[torch.Tensor, torch.Tensor]` means:
-    - This function returns a tuple
-    - The tuple contains exactly 2 elements
-    - Both elements are torch.Tensor types
+    【回傳型別註解】
+    `-> tuple[torch.Tensor, torch.Tensor]` 代表：
+    - 此函式回傳一個 tuple
+    - tuple 包含正好 2 個元素
+    - 兩個元素都是 torch.Tensor 型別
     """
-    # ========== Step 1: Get d_k (dimension of keys) ==========
-    # query.size(-1) gets the last dimension
-    # Example: if query.shape = (32, 8, 50, 64), then d_k = 64
+    # ========== 步驟 1：取得 d_k（鍵值的維度）==========
+    # query.size(-1) 取得最後一個維度
+    # 範例：若 query.shape = (32, 8, 50, 64)，則 d_k = 64
     #
-    # Why do we need d_k?
-    # - For scaling the attention scores (prevent gradient vanishing)
-    # - This is the "scaled" part of "scaled dot-product attention"
+    # 為什麼需要 d_k？
+    # - 用於縮放注意力分數（防止梯度消失）
+    # - 這是「縮放點積注意力」中的「縮放」部分
     d_k = query.size(-1)
 
-    # ========== Step 2: Compute Attention Scores (Q·K^T) ==========
-    # Matrix multiplication: Query × Key^transpose
+    # ========== 步驟 2：計算注意力分數（Q·K^T）==========
+    # 矩陣乘法：Query × Key^轉置
     #
-    # key.transpose(-2, -1) swaps the last two dimensions:
-    # Before: (batch, heads, seq_len_k, d_k)
-    # After:  (batch, heads, d_k, seq_len_k)
+    # key.transpose(-2, -1) 交換最後兩個維度：
+    # 之前：(batch, heads, seq_len_k, d_k)
+    # 之後：(batch, heads, d_k, seq_len_k)
     #
-    # Matrix multiplication:
+    # 矩陣乘法：
     # (batch, heads, seq_len_q, d_k) × (batch, heads, d_k, seq_len_k)
     # →  (batch, heads, seq_len_q, seq_len_k)
     #
-    # What does scores[i,j,q,k] represent?
-    # - How much query q attends to key k
-    # - Higher value = more relevant
+    # scores[i,j,q,k] 代表什麼？
+    # - 查詢 q 對鍵值 k 的關注程度
+    # - 數值越高 = 越相關
     #
-    # Concrete example (seq_len=5, d_k=64):
-    # Q[0] = [1, 2, ..., 64]  # query for "eating"
-    # K[3] = [3, 1, ..., 32]  # key for "apples"
-    # score = Q[0]·K[3] = 1*3 + 2*1 + ... = some large number
+    # 具體範例（seq_len=5, d_k=64）：
+    # Q[0] = [1, 2, ..., 64]  # "eating" 的查詢
+    # K[3] = [3, 1, ..., 32]  # "apples" 的鍵值
+    # score = Q[0]·K[3] = 1*3 + 2*1 + ... = 某個大數字
     scores = torch.matmul(query, key.transpose(-2, -1))
     # scores.shape = (batch_size, num_heads, seq_len_q, seq_len_k)
 
-    # ========== Step 3: Scale by √d_k (Critical Step!) ==========
-    # This is THE defining feature of "Scaled" Dot-Product Attention
+    # ========== 步驟 3：用 √d_k 縮放（關鍵步驟！）==========
+    # 這是「縮放」點積注意力的決定性特徵
     #
-    # Why do we scale? Why is this necessary?
+    # 為什麼要縮放？為什麼這是必要的？
     #
-    # Problem: Dot products grow with dimensionality
-    # - If d_k = 64, dot product might be: 1*2 + 3*4 + ... (64 terms)
-    # - Even with small numbers, sum can be very large
-    # - Example: average dot product ≈ 0 but variance ≈ d_k
+    # 問題：點積會隨著維度增長
+    # - 若 d_k = 64，點積可能是：1*2 + 3*4 + ...（64 項）
+    # - 即使數字很小，總和也可能很大
+    # - 範例：平均點積 ≈ 0 但變異數 ≈ d_k
     #
-    # What happens without scaling?
-    # Let's say d_k = 64 and scores = [200, 180, 150, 120]
+    # 沒有縮放會發生什麼？
+    # 假設 d_k = 64 且 scores = [200, 180, 150, 120]
     # softmax([200, 180, 150, 120]) ≈ [0.99, 0.01, 0.00, 0.00]
-    # → Nearly one-hot! (gradient vanishing)
+    # → 幾乎是 one-hot！（梯度消失）
     #
-    # With scaling (divide by √64 = 8):
+    # 使用縮放（除以 √64 = 8）：
     # scores = [25, 22.5, 18.75, 15]
     # softmax([25, 22.5, 18.75, 15]) ≈ [0.65, 0.24, 0.08, 0.03]
-    # → Smooth distribution (healthy gradients)
+    # → 平滑分布（健康的梯度）
     #
-    # Why √d_k specifically?
-    # - Theoretical analysis shows variance of QK^T is proportional to d_k
-    # - Dividing by √d_k normalizes variance to ≈1
-    # - Keeps softmax input in reasonable range
+    # 為什麼特別是 √d_k？
+    # - 理論分析顯示 QK^T 的變異數與 d_k 成正比
+    # - 除以 √d_k 將變異數標準化至 ≈1
+    # - 保持 softmax 輸入在合理範圍內
     scores = scores / math.sqrt(d_k)
-    # Now scores are scaled appropriately
+    # 現在分數已適當縮放
 
-    # ========== Step 4: Apply Mask (If Provided) ==========
-    # Masks are used to "ignore" certain positions
+    # ========== 步驟 4：套用遮罩（如果提供）==========
+    # 遮罩用於「忽略」某些位置
     #
-    # Two main types of masks:
+    # 兩種主要的遮罩類型：
     #
-    # 1. Padding Mask:
-    #    Sentence: "I love eating apples <PAD> <PAD>"
-    #    Mask:     [1, 1, 1, 1, 0, 0]
-    #    → Don't attend to <PAD> tokens (they're meaningless)
+    # 1. Padding Mask（填充遮罩）：
+    #    句子："I love eating apples <PAD> <PAD>"
+    #    遮罩：[1, 1, 1, 1, 0, 0]
+    #    → 不關注 <PAD> 詞元（它們沒有意義）
     #
-    # 2. Causal Mask (for decoder):
-    #    When predicting word i, can only see words 0...i-1
-    #    Prevents "cheating" by looking at future words
-    #    Example (position 2):
-    #    Mask: [1, 1, 1, 0, 0]  # can see words 0,1,2 but not 3,4
+    # 2. Causal Mask（因果遮罩，用於解碼器）：
+    #    預測第 i 個詞時，只能看到第 0...i-1 個詞
+    #    防止「作弊」查看未來的詞
+    #    範例（位置 2）：
+    #    遮罩：[1, 1, 1, 0, 0]  # 可以看到詞 0,1,2 但看不到 3,4
     #
-    # How masking works:
-    # - Set masked positions to very negative value (-1e9)
-    # - After softmax, exp(-1e9) ≈ 0
-    # - These positions get near-zero attention weight
+    # 遮罩如何運作：
+    # - 將被遮罩的位置設為非常負的值（-1e9）
+    # - softmax 後，exp(-1e9) ≈ 0
+    # - 這些位置獲得接近零的注意力權重
     #
-    # Why -1e9 instead of -inf?
-    # - -inf can cause NaN in some edge cases
-    # - -1e9 is "negative enough" and numerically stable
+    # 為什麼用 -1e9 而不是 -inf？
+    # - -inf 在某些邊緣情況下可能導致 NaN
+    # - -1e9 已經「夠負」且數值穩定
     if mask is not None:
-        # masked_fill: where mask==0, replace with -1e9
-        # Example:
+        # masked_fill：mask==0 的位置替換為 -1e9
+        # 範例：
         # scores = [[10, 20, 30, 40, 50]]
         # mask   = [[1,  1,  1,  0,  0]]
         # result = [[10, 20, 30, -1e9, -1e9]]
         scores = scores.masked_fill(mask == 0, -1e9)
 
-    # ========== Step 5: Apply Softmax → Attention Weights ==========
-    # Softmax converts scores into a probability distribution
+    # ========== 步驟 5：套用 Softmax → 注意力權重 ==========
+    # Softmax 將分數轉換為機率分布
     #
-    # Formula: softmax(x_i) = exp(x_i) / Σ exp(x_j)
+    # 公式：softmax(x_i) = exp(x_i) / Σ exp(x_j)
     #
-    # Properties:
-    # - All values between 0 and 1
-    # - Sum of all values = 1 (probability distribution)
-    # - Larger inputs → larger outputs (but normalized)
+    # 性質：
+    # - 所有值介於 0 和 1 之間
+    # - 所有值的總和 = 1（機率分布）
+    # - 較大的輸入 → 較大的輸出（但經過標準化）
     #
-    # dim=-1 means:
-    # - Apply softmax over the last dimension (seq_len_k)
-    # - Each row becomes a probability distribution
+    # dim=-1 代表：
+    # - 在最後一個維度（seq_len_k）上套用 softmax
+    # - 每一行變成機率分布
     # - attention_weights[i, j, q, :].sum() = 1
     #
-    # Concrete example:
-    # Input scores:  [2.0, 1.5, 0.5, -1e9]
-    # After softmax: [0.58, 0.32, 0.10, 0.00]
-    # Notice:
-    # - Highest score (2.0) → highest weight (0.58)
-    # - Masked position (-1e9) → nearly zero (0.00)
-    # - Sum = 1.00
+    # 具體範例：
+    # 輸入分數：  [2.0, 1.5, 0.5, -1e9]
+    # Softmax 後：[0.58, 0.32, 0.10, 0.00]
+    # 注意：
+    # - 最高分數（2.0）→ 最高權重（0.58）
+    # - 被遮罩位置（-1e9）→ 接近零（0.00）
+    # - 總和 = 1.00
     attention_weights = F.softmax(scores, dim=-1)
     # attention_weights.shape = (batch_size, num_heads, seq_len_q, seq_len_k)
 
-    # ========== Step 6: Weighted Sum of Values ==========
-    # This is where we actually "attend" to the values!
+    # ========== 步驟 6：值的加權和 ==========
+    # 這裡是我們實際「關注」值的地方！
     #
-    # Matrix multiplication:
+    # 矩陣乘法：
     # (batch, heads, seq_len_q, seq_len_k) × (batch, heads, seq_len_k, d_v)
     # →  (batch, heads, seq_len_q, d_v)
     #
-    # What this does:
-    # For each query position, combine all values weighted by attention
+    # 這做了什麼：
+    # 對每個查詢位置，用注意力權重組合所有值
     #
-    # Concrete example: "I love eating apples"
-    # For query "eating":
-    #   attention_weights = [0.1, 0.1, 0.2, 0.6]  # high attention on "apples"
-    #   values:
+    # 具體範例："I love eating apples"
+    # 對於查詢 "eating"：
+    #   attention_weights = [0.1, 0.1, 0.2, 0.6]  # 對 "apples" 高度關注
+    #   值：
     #     V["I"]      = [v1, v2, v3, ...]
     #     V["love"]   = [v4, v5, v6, ...]
     #     V["eating"] = [v7, v8, v9, ...]
     #     V["apples"] = [v10, v11, v12, ...]
     #
     #   output = 0.1*V["I"] + 0.1*V["love"] + 0.2*V["eating"] + 0.6*V["apples"]
-    #          = mostly information from "apples"!
+    #          = 主要來自 "apples" 的資訊！
     #
-    # This is the magic of attention:
-    # - Dynamically select relevant information
-    # - Different for each position
-    # - Learned from data
+    # 這就是注意力的魔力：
+    # - 動態選擇相關資訊
+    # - 每個位置都不同
+    # - 從資料中學習
     output = torch.matmul(attention_weights, value)
     # output.shape = (batch_size, num_heads, seq_len_q, d_v)
 
@@ -280,266 +280,266 @@ def scaled_dot_product_attention(
 
 class MultiHeadAttention(nn.Module):
     """
-    Multi-Head Attention Mechanism
+    多頭注意力機制（Multi-Head Attention Mechanism）
 
-    【Why Do We Need Multiple Heads?】
-    Imagine a bank deciding whether to lend you money:
+    【為什麼需要多個頭？】
+    想像一家銀行決定是否借錢給你：
 
-    Single Expert Problem:
-    - One expert only looks at credit score
-    - Misses other important factors
-    - Limited perspective
+    單一專家問題：
+    - 一位專家只看信用評分
+    - 錯過其他重要因素
+    - 視角有限
 
-    Multi-Expert Solution (Multi-Head):
-    - Expert 1: Checks credit score
-    - Expert 2: Analyzes income stability
-    - Expert 3: Reviews assets
-    - Expert 4: Examines employment history
-    → Combine all opinions for better decision!
+    多專家解決方案（多頭）：
+    - 專家 1：檢查信用評分
+    - 專家 2：分析收入穩定性
+    - 專家 3：審查資產
+    - 專家 4：檢視就業歷史
+    → 結合所有意見做出更好的決策！
 
-    Similarly, in language:
+    同樣地，在語言中：
 
-    Single Attention Head Problem:
-    - Might only capture subject-verb relationships
-    - Misses other important patterns
-    - Example: "The bank can refuse to lend money"
-      * Only seeing: "bank → refuse" (syntactic)
-      * Missing: "refuse → lend" (semantic)
+    單一注意力頭問題：
+    - 可能只捕捉主謂關係
+    - 錯過其他重要模式
+    - 範例："The bank can refuse to lend money"
+      * 只看到："bank → refuse"（句法）
+      * 錯過："refuse → lend"（語義）
 
-    Multi-Head Attention Solution:
-    - Head 1: Subject-verb relationships
-    - Head 2: Verb-object relationships
-    - Head 3: Modifier relationships
-    - Head 4: Positional relationships
-    - Head 5-8: Other patterns...
-    → Each head learns different aspects!
+    多頭注意力解決方案：
+    - 頭 1：主謂關係
+    - 頭 2：動賓關係
+    - 頭 3：修飾關係
+    - 頭 4：位置關係
+    - 頭 5-8：其他模式...
+    → 每個頭學習不同的面向！
 
-    【Architecture Overview】
-    Flow:
+    【架構概覽】
+    流程：
     ```
-    Input (batch, seq_len, d_model)
+    輸入 (batch, seq_len, d_model)
       ↓
-    [Linear Projections: W_q, W_k, W_v]
+    [線性投影：W_q, W_k, W_v]
       ↓
-    [Split into num_heads]
+    [分割成 num_heads 個頭]
       ↓
-    [Scaled Dot-Product Attention] (in parallel for each head)
+    [縮放點積注意力]（每個頭平行處理）
       ↓
-    [Combine heads]
+    [組合所有頭]
       ↓
-    [Linear Projection: W_o]
+    [線性投影：W_o]
       ↓
-    Output (batch, seq_len, d_model)
+    輸出 (batch, seq_len, d_model)
     ```
 
-    【Why This Design?】
-    - Multiple heads = multiple perspectives
-    - Each head has d_k = d_model / num_heads dimensions
-    - Total computation ≈ same as single head with full dimension
-    - But much more expressive!
+    【為什麼這樣設計？】
+    - 多個頭 = 多個視角
+    - 每個頭有 d_k = d_model / num_heads 維度
+    - 總計算量 ≈ 與單頭全維度相同
+    - 但表達能力更強！
 
-    【Concrete Example】
+    【具體範例】
     d_model = 512, num_heads = 8
-    → Each head gets d_k = 512/8 = 64 dimensions
-    → 8 different 64-dim "experts" working in parallel
-    → Final combination creates rich 512-dim representation
+    → 每個頭獲得 d_k = 512/8 = 64 維度
+    → 8 個不同的 64 維「專家」平行工作
+    → 最終組合創造豐富的 512 維表示
 
     Args:
-        d_model: Model dimension (input/output dimension, e.g., 512)
-        num_heads: Number of attention heads (e.g., 8)
-                   Note: d_model must be divisible by num_heads
+        d_model: 模型維度（輸入/輸出維度，例如 512）
+        num_heads: 注意力頭的數量（例如 8）
+                   注意：d_model 必須能被 num_heads 整除
     """
 
     def __init__(self, d_model: int, num_heads: int):
         super().__init__()
 
-        # ========== Validation: d_model must be divisible by num_heads ==========
-        # Why this requirement?
-        # - We split d_model equally among heads
-        # - Each head gets d_k = d_model // num_heads dimensions
-        # - If not divisible, we can't split evenly
+        # ========== 驗證：d_model 必須能被 num_heads 整除 ==========
+        # 為什麼有這個要求？
+        # - 我們將 d_model 平均分給所有頭
+        # - 每個頭獲得 d_k = d_model // num_heads 維度
+        # - 如果不能整除，就無法平均分割
         #
-        # Example:
-        # ✓ d_model=512, num_heads=8  → d_k=64 (works!)
-        # ✗ d_model=512, num_heads=7  → d_k=73.14... (doesn't work!)
+        # 範例：
+        # ✓ d_model=512, num_heads=8  → d_k=64（可行！）
+        # ✗ d_model=512, num_heads=7  → d_k=73.14...（不可行！）
         assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
 
         self.d_model = d_model
         self.num_heads = num_heads
 
-        # ========== Calculate dimension per head ==========
-        # Each head operates on d_k dimensions
-        # Example: 512 dimensions split across 8 heads = 64 dims per head
-        self.d_k = d_model // num_heads  # Integer division
+        # ========== 計算每個頭的維度 ==========
+        # 每個頭操作 d_k 維度
+        # 範例：512 維度分成 8 個頭 = 每個頭 64 維
+        self.d_k = d_model // num_heads  # 整數除法
 
-        # ========== Define 4 Linear Layers (Learnable Projections) ==========
+        # ========== 定義 4 個線性層（可學習的投影）==========
 
-        # W_q, W_k, W_v: Project input to Query, Key, Value
-        # Input: (batch, seq_len, d_model)
-        # Output: (batch, seq_len, d_model)
+        # W_q, W_k, W_v：將輸入投影到 Query、Key、Value
+        # 輸入：(batch, seq_len, d_model)
+        # 輸出：(batch, seq_len, d_model)
         #
-        # Why d_model → d_model and not d_model → d_k?
-        # - We project to full d_model first
-        # - Then split into num_heads pieces of size d_k each
-        # - This is more efficient than doing num_heads separate projections
+        # 為什麼是 d_model → d_model 而不是 d_model → d_k？
+        # - 我們先投影到完整的 d_model
+        # - 然後分割成 num_heads 個大小為 d_k 的部分
+        # - 這比做 num_heads 次獨立投影更有效率
         #
-        # Why are these learnable?
-        # - The model learns what questions to ask (W_q)
-        # - The model learns what keys to produce (W_k)
-        # - The model learns what values to return (W_v)
+        # 為什麼這些是可學習的？
+        # - 模型學習要問什麼問題（W_q）
+        # - 模型學習要產生什麼鍵值（W_k）
+        # - 模型學習要回傳什麼值（W_v）
         #
-        # Example with d_model=512:
-        # - W_q has 512×512 = 262,144 parameters
-        # - W_k has 512×512 = 262,144 parameters
-        # - W_v has 512×512 = 262,144 parameters
-        self.W_q = nn.Linear(d_model, d_model)  # Query projection
-        self.W_k = nn.Linear(d_model, d_model)  # Key projection
-        self.W_v = nn.Linear(d_model, d_model)  # Value projection
+        # d_model=512 的範例：
+        # - W_q 有 512×512 = 262,144 個參數
+        # - W_k 有 512×512 = 262,144 個參數
+        # - W_v 有 512×512 = 262,144 個參數
+        self.W_q = nn.Linear(d_model, d_model)  # Query 投影
+        self.W_k = nn.Linear(d_model, d_model)  # Key 投影
+        self.W_v = nn.Linear(d_model, d_model)  # Value 投影
 
-        # W_o: Output projection
-        # After combining all heads, project back to d_model
-        # Input: (batch, seq_len, d_model)
-        # Output: (batch, seq_len, d_model)
+        # W_o：輸出投影
+        # 組合所有頭後，投影回 d_model
+        # 輸入：(batch, seq_len, d_model)
+        # 輸出：(batch, seq_len, d_model)
         #
-        # Why do we need this?
-        # - Integrates information from all heads
-        # - Allows model to learn how to combine head outputs
-        # - Without it, we'd just be concatenating, not learning to combine
+        # 為什麼需要這個？
+        # - 整合所有頭的資訊
+        # - 讓模型學習如何組合頭的輸出
+        # - 沒有它，我們只是在拼接，而不是學習組合
         #
-        # Total parameters: 512×512 = 262,144
-        self.W_o = nn.Linear(d_model, d_model)  # Output projection
+        # 總參數量：512×512 = 262,144
+        self.W_o = nn.Linear(d_model, d_model)  # 輸出投影
 
-        # Total parameters for Multi-Head Attention:
+        # 多頭注意力的總參數量：
         # W_q + W_k + W_v + W_o = 4 × (d_model × d_model)
-        # Example: 4 × (512 × 512) = 1,048,576 parameters
+        # 範例：4 × (512 × 512) = 1,048,576 個參數
 
     def split_heads(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Split input into multiple attention heads
+        將輸入分割成多個注意力頭
 
-        Input shape:  (batch_size, seq_len, d_model)
-        Output shape: (batch_size, num_heads, seq_len, d_k)
+        輸入形狀：(batch_size, seq_len, d_model)
+        輸出形狀：(batch_size, num_heads, seq_len, d_k)
 
-        【What This Does】
-        Takes a tensor with d_model dimensions and splits it into num_heads pieces,
-        each with d_k dimensions.
+        【這做了什麼】
+        取一個具有 d_model 維度的張量，並將其分割成 num_heads 個部分，
+        每個部分有 d_k 維度。
 
-        【Visual Example】
+        【視覺範例】
         d_model = 512, num_heads = 8, d_k = 64
 
-        Input:
+        輸入：
         (batch, seq_len, 512)
-        [......512 dimensions......]
+        [......512 維度......]
 
-        After split:
+        分割後：
         (batch, seq_len, 8, 64)
         [64][64][64][64][64][64][64][64]
          ↑   ↑   ↑   ↑   ↑   ↑   ↑   ↑
         h0  h1  h2  h3  h4  h5  h6  h7
 
-        After transpose:
+        轉置後：
         (batch, 8, seq_len, 64)
-        Now organized by head, so each head can work independently!
+        現在按頭組織，所以每個頭可以獨立工作！
 
-        【Why Transpose?】
-        We want the batch operations to process all heads in parallel:
-        - Before: (batch, seq_len, num_heads, d_k)
-          Hard to process heads independently
-        - After: (batch, num_heads, seq_len, d_k)
-          Easy! Each head is a separate "batch" item
+        【為什麼要轉置？】
+        我們希望批次操作平行處理所有頭：
+        - 之前：(batch, seq_len, num_heads, d_k)
+          難以獨立處理各頭
+        - 之後：(batch, num_heads, seq_len, d_k)
+          簡單！每個頭都是獨立的「批次」項目
         """
         batch_size, seq_len, d_model = x.size()
 
-        # ========== Step 1: Reshape to split dimensions ==========
-        # view() reshapes the tensor without copying data
+        # ========== 步驟 1：重塑以分割維度 ==========
+        # view() 重塑張量而不複製資料
         # (batch_size, seq_len, d_model) → (batch_size, seq_len, num_heads, d_k)
         #
-        # Example with batch=2, seq_len=5, d_model=512, num_heads=8:
+        # batch=2, seq_len=5, d_model=512, num_heads=8 的範例：
         # (2, 5, 512) → (2, 5, 8, 64)
         #
-        # The 512 dimensions are split into 8 groups of 64:
-        # [0:64]    → head 0
-        # [64:128]  → head 1
-        # [128:192] → head 2
+        # 512 維度被分割成 8 組，每組 64：
+        # [0:64]    → 頭 0
+        # [64:128]  → 頭 1
+        # [128:192] → 頭 2
         # ...
-        # [448:512] → head 7
+        # [448:512] → 頭 7
         x = x.view(batch_size, seq_len, self.num_heads, self.d_k)
 
-        # ========== Step 2: Transpose to group by head ==========
-        # transpose(1, 2) swaps dimensions 1 and 2
-        # Before: (batch_size, seq_len, num_heads, d_k)
-        # After:  (batch_size, num_heads, seq_len, d_k)
+        # ========== 步驟 2：轉置以按頭分組 ==========
+        # transpose(1, 2) 交換維度 1 和 2
+        # 之前：(batch_size, seq_len, num_heads, d_k)
+        # 之後：(batch_size, num_heads, seq_len, d_k)
         #
-        # Why is this better?
-        # - Now "num_heads" dimension comes before "seq_len"
-        # - Can process all heads in parallel using batch operations
-        # - Each head independently processes its seq_len × d_k data
+        # 為什麼這樣更好？
+        # - 現在 "num_heads" 維度在 "seq_len" 之前
+        # - 可以使用批次操作平行處理所有頭
+        # - 每個頭獨立處理其 seq_len × d_k 的資料
         #
-        # Think of it as having 8 separate attention mechanisms
-        # running in parallel, each working on 64-dimensional space
+        # 可以想像成有 8 個獨立的注意力機制
+        # 平行運行，每個都在 64 維空間中工作
         return x.transpose(1, 2)
-        # Output shape: (batch_size, num_heads, seq_len, d_k)
+        # 輸出形狀：(batch_size, num_heads, seq_len, d_k)
 
     def combine_heads(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Combine multiple attention heads back together
+        將多個注意力頭組合回來
 
-        Input shape:  (batch_size, num_heads, seq_len, d_k)
-        Output shape: (batch_size, seq_len, d_model)
+        輸入形狀：(batch_size, num_heads, seq_len, d_k)
+        輸出形狀：(batch_size, seq_len, d_model)
 
-        This is the inverse of split_heads.
+        這是 split_heads 的逆操作。
 
-        【Visual Example】
+        【視覺範例】
         num_heads = 8, d_k = 64, d_model = 512
 
-        Input (after attention):
+        輸入（注意力後）：
         (batch, 8, seq_len, 64)
-        Head 0: [64 dims]
-        Head 1: [64 dims]
+        頭 0：[64 維]
+        頭 1：[64 維]
         ...
-        Head 7: [64 dims]
+        頭 7：[64 維]
 
-        After transpose:
+        轉置後：
         (batch, seq_len, 8, 64)
 
-        After view (concatenate):
+        view 後（拼接）：
         (batch, seq_len, 512)
-        [h0: 64][h1: 64]...[h7: 64] = 512 dimensions
+        [h0: 64][h1: 64]...[h7: 64] = 512 維度
 
-        【Why .contiguous()?】
-        Technical detail about PyTorch memory layout:
-        - transpose() doesn't copy data, just changes the view
-        - view() requires memory to be contiguous
-        - contiguous() creates a contiguous copy if needed
+        【為什麼要 .contiguous()？】
+        PyTorch 記憶體佈局的技術細節：
+        - transpose() 不複製資料，只改變視圖
+        - view() 需要記憶體是連續的
+        - contiguous() 在需要時創建連續副本
         """
         batch_size, num_heads, seq_len, d_k = x.size()
 
-        # ========== Step 1: Transpose back ==========
-        # Swap dimensions 1 and 2
+        # ========== 步驟 1：轉置回來 ==========
+        # 交換維度 1 和 2
         # (batch_size, num_heads, seq_len, d_k) → (batch_size, seq_len, num_heads, d_k)
         #
-        # This brings seq_len back to dimension 1
-        # Now: each position has num_heads pieces of d_k dimensions
+        # 這將 seq_len 帶回維度 1
+        # 現在：每個位置有 num_heads 個 d_k 維度的片段
         x = x.transpose(1, 2)
 
-        # ========== Step 2: Merge heads (concatenate) ==========
-        # .contiguous() ensures memory is laid out correctly
-        # Why needed?
-        # - transpose() creates a VIEW of the data (doesn't copy)
-        # - The actual memory is still in the original order
-        # - view() requires contiguous memory
-        # - contiguous() makes a copy if necessary
+        # ========== 步驟 2：合併頭（拼接）==========
+        # .contiguous() 確保記憶體佈局正確
+        # 為什麼需要？
+        # - transpose() 創建資料的視圖（不複製）
+        # - 實際記憶體仍然是原始順序
+        # - view() 需要連續記憶體
+        # - contiguous() 在必要時製作副本
         #
-        # .view() reshapes the tensor
+        # .view() 重塑張量
         # (batch_size, seq_len, num_heads, d_k) → (batch_size, seq_len, d_model)
         #
-        # Example: (2, 5, 8, 64) → (2, 5, 512)
-        # The 8 chunks of 64 dimensions are concatenated:
-        # [head0: 64 dims][head1: 64 dims]...[head7: 64 dims] = 512 dims
+        # 範例：(2, 5, 8, 64) → (2, 5, 512)
+        # 8 個 64 維度的塊被拼接：
+        # [頭0: 64 維][頭1: 64 維]...[頭7: 64 維] = 512 維
         #
-        # Each position now has information from all 8 heads combined!
+        # 每個位置現在擁有所有 8 個頭組合的資訊！
         return x.contiguous().view(batch_size, seq_len, self.d_model)
-        # Output shape: (batch_size, seq_len, d_model)
+        # 輸出形狀：(batch_size, seq_len, d_model)
 
     def forward(
         self,
@@ -549,141 +549,141 @@ class MultiHeadAttention(nn.Module):
         mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
-        Multi-head attention forward pass
+        多頭注意力前向傳播
 
         Args:
-            query: Query tensor, shape (batch_size, seq_len, d_model)
-            key:   Key tensor, shape (batch_size, seq_len, d_model)
-            value: Value tensor, shape (batch_size, seq_len, d_model)
-            mask:  Optional mask, shape (batch_size, 1, 1, seq_len) or
+            query: Query 張量，形狀 (batch_size, seq_len, d_model)
+            key:   Key 張量，形狀 (batch_size, seq_len, d_model)
+            value: Value 張量，形狀 (batch_size, seq_len, d_model)
+            mask:  可選遮罩，形狀 (batch_size, 1, 1, seq_len) 或
                    (batch_size, 1, seq_len, seq_len)
 
         Returns:
-            output: Multi-head attention output, shape (batch_size, seq_len, d_model)
+            output: 多頭注意力輸出，形狀 (batch_size, seq_len, d_model)
 
-        【Complete Flow Example: "I love eating apples"】
-        Assume: batch=1, seq_len=5, d_model=512, num_heads=8, d_k=64
+        【完整流程範例："I love eating apples"】
+        假設：batch=1, seq_len=5, d_model=512, num_heads=8, d_k=64
 
-        Input:
-            query = key = value (self-attention)
-            shape: (1, 5, 512)
-            Each word is a 512-dim vector
+        輸入：
+            query = key = value（自注意力）
+            形狀：(1, 5, 512)
+            每個詞是一個 512 維向量
 
-        Step 1: Linear Projections
+        步驟 1：線性投影
             Q = W_q(query) = (1, 5, 512)
             K = W_k(key) = (1, 5, 512)
             V = W_v(value) = (1, 5, 512)
-            (Model learns what questions/keys/values to create)
+            （模型學習要創建什麼問題/鍵值/值）
 
-        Step 2: Split into 8 Heads
-            Q = (1, 8, 5, 64)  # 8 different 64-dim queries per word
-            K = (1, 8, 5, 64)  # 8 different 64-dim keys per word
-            V = (1, 8, 5, 64)  # 8 different 64-dim values per word
+        步驟 2：分割成 8 個頭
+            Q = (1, 8, 5, 64)  # 每個詞有 8 個不同的 64 維查詢
+            K = (1, 8, 5, 64)  # 每個詞有 8 個不同的 64 維鍵值
+            V = (1, 8, 5, 64)  # 每個詞有 8 個不同的 64 維值
 
-            Head 0 might focus on: subject-verb relationships
-            Head 1 might focus on: verb-object relationships
+            頭 0 可能專注於：主謂關係
+            頭 1 可能專注於：動賓關係
             ...
-            Head 7 might focus on: positional patterns
+            頭 7 可能專注於：位置模式
 
-        Step 3: Attention (per head)
-            For "eating" in head 1 (verb-object head):
-            - Query("eating"): "I need an object"
-            - Keys: ["I", "love", "eating", "apples", "<END>"]
-            - Attention weights: [0.1, 0.1, 0.2, 0.6, 0.0]
-            - Output: mainly value of "apples"!
+        步驟 3：注意力（每個頭）
+            對於頭 1 中的 "eating"（動賓頭）：
+            - Query("eating")："我需要一個賓語"
+            - Keys：["I", "love", "eating", "apples", "<END>"]
+            - 注意力權重：[0.1, 0.1, 0.2, 0.6, 0.0]
+            - 輸出：主要是 "apples" 的值！
 
-        Step 4: Combine Heads
+        步驟 4：組合頭
             (1, 8, 5, 64) → (1, 5, 512)
-            Concatenate all 8 heads' outputs:
-            [head0: 64][head1: 64]...[head7: 64] = 512 dims
+            拼接所有 8 個頭的輸出：
+            [頭0: 64][頭1: 64]...[頭7: 64] = 512 維
 
-        Step 5: Output Projection
-            W_o learns how to combine information from all heads
+        步驟 5：輸出投影
+            W_o 學習如何組合所有頭的資訊
             (1, 5, 512) → (1, 5, 512)
 
-        Final output:
-            Each word now contains information from multiple perspectives!
+        最終輸出：
+            每個詞現在包含多個視角的資訊！
         """
         batch_size = query.size(0)
 
-        # ========== Step 1: Apply Linear Projections ==========
-        # Transform input into Query, Key, Value representations
+        # ========== 步驟 1：套用線性投影 ==========
+        # 將輸入轉換為 Query、Key、Value 表示
         #
-        # Why do we need these projections?
-        # - Learn task-specific transformations
-        # - Create appropriate "questions", "keys", and "values"
-        # - Different weights for Q, K, V allow different roles
+        # 為什麼需要這些投影？
+        # - 學習特定任務的轉換
+        # - 創建適當的「問題」、「鍵值」和「值」
+        # - Q、K、V 的不同權重允許不同角色
         #
-        # Input: (batch_size, seq_len, d_model)
-        # Output: (batch_size, seq_len, d_model)
+        # 輸入：(batch_size, seq_len, d_model)
+        # 輸出：(batch_size, seq_len, d_model)
         #
-        # Example: "eating" with d_model=512
-        # Original vector: [x1, x2, ..., x512]
-        # After W_q: [q1, q2, ..., q512]  ("what object do I need?")
-        # After W_k: [k1, k2, ..., k512]  ("I'm a verb")
-        # After W_v: [v1, v2, ..., v512]  ("here's my meaning")
+        # 範例："eating" 與 d_model=512
+        # 原始向量：[x1, x2, ..., x512]
+        # W_q 後：[q1, q2, ..., q512]（「我需要什麼賓語？」）
+        # W_k 後：[k1, k2, ..., k512]（「我是一個動詞」）
+        # W_v 後：[v1, v2, ..., v512]（「這是我的意義」）
         Q = self.W_q(query)  # (batch_size, seq_len, d_model)
         K = self.W_k(key)    # (batch_size, seq_len, d_model)
         V = self.W_v(value)  # (batch_size, seq_len, d_model)
 
-        # ========== Step 2: Split into Multiple Heads ==========
-        # Divide the d_model dimensions among num_heads heads
-        # Each head gets d_k = d_model / num_heads dimensions
+        # ========== 步驟 2：分割成多個頭 ==========
+        # 將 d_model 維度分給 num_heads 個頭
+        # 每個頭獲得 d_k = d_model / num_heads 維度
         #
-        # Input: (batch_size, seq_len, d_model)
-        # Output: (batch_size, num_heads, seq_len, d_k)
+        # 輸入：(batch_size, seq_len, d_model)
+        # 輸出：(batch_size, num_heads, seq_len, d_k)
         #
-        # Example: (1, 5, 512) → (1, 8, 5, 64)
-        # Now we have 8 parallel attention mechanisms!
+        # 範例：(1, 5, 512) → (1, 8, 5, 64)
+        # 現在我們有 8 個平行的注意力機制！
         Q = self.split_heads(Q)  # (batch_size, num_heads, seq_len, d_k)
         K = self.split_heads(K)  # (batch_size, num_heads, seq_len, d_k)
         V = self.split_heads(V)  # (batch_size, num_heads, seq_len, d_k)
 
-        # ========== Step 3: Apply Scaled Dot-Product Attention ==========
-        # Run attention independently for each head
-        # All heads process in parallel (batch operations)
+        # ========== 步驟 3：套用縮放點積注意力 ==========
+        # 為每個頭獨立運行注意力
+        # 所有頭平行處理（批次操作）
         #
-        # Input: Q, K, V all of shape (batch_size, num_heads, seq_len, d_k)
-        # Output: attn_output of shape (batch_size, num_heads, seq_len, d_k)
+        # 輸入：Q、K、V 都是形狀 (batch_size, num_heads, seq_len, d_k)
+        # 輸出：attn_output 形狀 (batch_size, num_heads, seq_len, d_k)
         #
-        # Each head:
-        # - Computes its own attention weights
-        # - Focuses on different aspects of the input
-        # - Produces its own d_k-dimensional output per position
+        # 每個頭：
+        # - 計算自己的注意力權重
+        # - 專注於輸入的不同面向
+        # - 為每個位置產生自己的 d_k 維輸出
         attn_output, _ = scaled_dot_product_attention(Q, K, V, mask)
-        # attn_output shape: (batch_size, num_heads, seq_len, d_k)
+        # attn_output 形狀：(batch_size, num_heads, seq_len, d_k)
 
-        # We ignore the attention weights here (the _ part)
-        # But they can be useful for visualization or debugging
+        # 我們在這裡忽略注意力權重（_ 部分）
+        # 但它們對於視覺化或除錯很有用
 
-        # ========== Step 4: Combine Heads ==========
-        # Merge all heads back together
+        # ========== 步驟 4：組合頭 ==========
+        # 將所有頭合併回來
         #
-        # Input: (batch_size, num_heads, seq_len, d_k)
-        # Output: (batch_size, seq_len, d_model)
+        # 輸入：(batch_size, num_heads, seq_len, d_k)
+        # 輸出：(batch_size, seq_len, d_model)
         #
-        # Example: (1, 8, 5, 64) → (1, 5, 512)
-        # Concatenates the 8 heads:
-        # [head0_output: 64][head1_output: 64]...[head7_output: 64] = 512
+        # 範例：(1, 8, 5, 64) → (1, 5, 512)
+        # 拼接 8 個頭：
+        # [頭0_輸出: 64][頭1_輸出: 64]...[頭7_輸出: 64] = 512
         #
-        # Now each position has information from all 8 perspectives!
+        # 現在每個位置都有來自所有 8 個視角的資訊！
         output = self.combine_heads(attn_output)  # (batch_size, seq_len, d_model)
 
-        # ========== Step 5: Final Linear Projection (W_o) ==========
-        # Learn how to best combine information from all heads
+        # ========== 步驟 5：最終線性投影（W_o）==========
+        # 學習如何最佳地組合所有頭的資訊
         #
-        # Input: (batch_size, seq_len, d_model)
-        # Output: (batch_size, seq_len, d_model)
+        # 輸入：(batch_size, seq_len, d_model)
+        # 輸出：(batch_size, seq_len, d_model)
         #
-        # Why is this needed?
-        # - Simple concatenation may not be optimal
-        # - W_o learns how to integrate multi-head outputs
-        # - Allows model to weight different heads differently
+        # 為什麼需要這個？
+        # - 簡單的拼接可能不是最優的
+        # - W_o 學習如何整合多頭輸出
+        # - 允許模型對不同的頭賦予不同權重
         #
-        # Example: Maybe head 1's output is very important, head 7 less so
-        # W_o can learn these relative importances
+        # 範例：也許頭 1 的輸出非常重要，頭 7 較不重要
+        # W_o 可以學習這些相對重要性
         output = self.W_o(output)  # (batch_size, seq_len, d_model)
 
-        # Final output shape: (batch_size, seq_len, d_model)
-        # Same shape as input, but now enriched with multi-head attention!
+        # 最終輸出形狀：(batch_size, seq_len, d_model)
+        # 與輸入形狀相同，但現在用多頭注意力豐富了！
         return output
