@@ -1,29 +1,29 @@
 """
-完整的 Transformer 模型
+Complete Transformer Model
 
-這是組合所有元件的頂層模型：
-1. 源序列與目標序列的嵌入層
-2. 位置編碼
-3. Encoder 堆疊（雙向注意力）
-4. Decoder 堆疊（遮罩自注意力 + 交叉注意力）
-5. 最終的線性投影到詞彙表
+This is the top-level model that combines:
+1. Source and Target Embeddings
+2. Positional Encoding
+3. Encoder Stack (bidirectional attention)
+4. Decoder Stack (masked self-attention + cross-attention)
+5. Final Linear Projection to Vocabulary
 
-架構：
-    源序列（Source Sequence）
+Architecture:
+    Source Sequence
          ↓
-    [嵌入 + 位置編碼]
+    [Embedding + Positional Encoding]
          ↓
-    [Encoder 堆疊] → Memory（編碼器輸出）
+    [Encoder Stack] → Memory (encoder outputs)
          ↓
-    目標序列（Target Sequence）
+    Target Sequence
          ↓
-    [嵌入 + 位置編碼]
+    [Embedding + Positional Encoding]
          ↓
-    [Decoder 堆疊] ← Memory
+    [Decoder Stack] ← Memory
          ↓
-    [線性投影]
+    [Linear Projection]
          ↓
-    輸出 Logits（詞彙表機率分佈）
+    Output Logits (vocabulary probabilities)
 """
 
 import torch
@@ -38,174 +38,174 @@ from .positional_encoding import PositionalEncoding
 
 class TokenEmbedding(nn.Module):
     """
-    詞元嵌入層（Token Embedding Layer）
+    Token Embedding Layer
 
-    【這是什麼？】
-    將離散的詞元（單字 ID）轉換成連續的向量表示，
-    讓神經網路可以處理。
+    【What Is This?】
+    Converts discrete tokens (word IDs) into continuous vector representations
+    that the neural network can process.
 
-    【為什麼需要這個？】
-    神經網路無法直接處理離散符號（如單字 ID）。
-    它們需要連續向量。詞元嵌入將詞彙表中的每個單字
-    映射到一個學習到的密集向量。
+    【Why Do We Need This?】
+    Neural networks can't directly process discrete symbols (like word IDs).
+    They need continuous vectors. Token embeddings map each word in the vocabulary
+    to a learned dense vector.
 
-    【如何運作？】
-    - 輸入：詞元 ID [batch_size, seq_len]（整數）
-    - 輸出：嵌入 [batch_size, seq_len, d_model]（浮點數）
+    【How It Works】
+    - Input: Token IDs [batch_size, seq_len] (integers)
+    - Output: Embeddings [batch_size, seq_len, d_model] (floats)
 
-    範例：
-        vocab_size = 10000（10,000 個不同單字）
-        d_model = 512（每個單字 → 512 維向量）
+    Example:
+        vocab_size = 10000 (10,000 different words)
+        d_model = 512 (each word → 512-dimensional vector)
 
-        詞元 ID 42 → [0.23, -0.45, 0.12, ..., 0.67]（512 個數字）
-        詞元 ID 99 → [0.81, 0.34, -0.23, ..., -0.12]（512 個數字）
+        Token ID 42 → [0.23, -0.45, 0.12, ..., 0.67]  (512 numbers)
+        Token ID 99 → [0.81, 0.34, -0.23, ..., -0.12]  (512 numbers)
 
-    【縮放因子】
-    我們將嵌入乘以 sqrt(d_model) 以防止它們相對於位置編碼太小，
-    這確保了訓練的穩定性。
+    【Scaling Factor】
+    We multiply embeddings by sqrt(d_model) to prevent them from being too small
+    compared to positional encodings, which ensures stable training.
 
-    這個縮放在原始 Transformer 論文（Vaswani et al., 2017）中有提到。
+    This scaling is mentioned in the original Transformer paper (Vaswani et al., 2017).
     """
 
     def __init__(self, vocab_size: int, d_model: int):
         """
-        初始化詞元嵌入層
+        Initialize Token Embedding Layer
 
         Args:
-            vocab_size: 詞彙表大小（唯一詞元的數量）
-            d_model: 模型維度（嵌入大小）
+            vocab_size: Size of vocabulary (number of unique tokens)
+            d_model: Dimension of model (embedding size)
 
-        範例：
-            vocab_size=10000 表示我們有 10,000 個唯一單字
-            d_model=512 表示每個單字變成 512 維向量
+        Example:
+            vocab_size=10000 means we have 10,000 unique words
+            d_model=512 means each word becomes a 512-dimensional vector
         """
         super().__init__()
 
-        # 嵌入查找表：vocab_size × d_model
-        # 每一行是一個詞元的嵌入向量
+        # Embedding lookup table: vocab_size × d_model
+        # Each row is the embedding vector for one token
         self.embedding = nn.Embedding(vocab_size, d_model)
         self.d_model = d_model
 
-        # 縮放因子：sqrt(d_model)
-        # 防止嵌入被位置編碼淹沒
+        # Scaling factor: sqrt(d_model)
+        # Prevents embeddings from being overwhelmed by positional encodings
         self.scale = math.sqrt(d_model)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        將詞元 ID 轉換為嵌入
+        Convert token IDs to embeddings
 
         Args:
-            x: 詞元 ID，形狀 [batch_size, seq_len]
+            x: Token IDs, shape [batch_size, seq_len]
 
         Returns:
-            縮放後的嵌入，形狀 [batch_size, seq_len, d_model]
+            Scaled embeddings, shape [batch_size, seq_len, d_model]
 
-        範例：
-            輸入：[[5, 42, 99]]  # batch=1, seq_len=3
-            輸出：[[[0.23, -0.45, ...],   # 詞元 5 的嵌入
-                   [0.81, 0.34, ...],     # 詞元 42 的嵌入
-                   [-0.12, 0.67, ...]]]   # 詞元 99 的嵌入
-                  形狀：(1, 3, 512)
+        Example:
+            Input: [[5, 42, 99]]  # batch=1, seq_len=3
+            Output: [[[0.23, -0.45, ...],   # embedding for token 5
+                      [0.81, 0.34, ...],    # embedding for token 42
+                      [-0.12, 0.67, ...]]]  # embedding for token 99
+                    shape: (1, 3, 512)
         """
-        # 步驟 1：查找每個詞元的嵌入
+        # Step 1: Look up embeddings for each token
         # x: (batch, seq_len) → (batch, seq_len, d_model)
         embedded = self.embedding(x)
 
-        # 步驟 2：乘以 sqrt(d_model) 進行縮放
-        # 這個縮放有助於平衡嵌入和位置編碼的幅度
+        # Step 2: Scale by sqrt(d_model)
+        # This scaling helps balance the magnitude of embeddings and positional encodings
         return embedded * self.scale
 
 
 class Transformer(nn.Module):
     """
-    完整的 Transformer 模型
+    Complete Transformer Model
 
-    【這是什麼？】
-    這是來自 "Attention Is All You Need" (2017) 的完整 Transformer 架構。
-    它將我們建構的所有元件組合成一個完整的序列到序列模型。
+    【What Is This?】
+    This is the full Transformer architecture from "Attention Is All You Need" (2017).
+    It combines all the components we've built into a complete sequence-to-sequence model.
 
-    【主要元件】
+    【Main Components】
 
-    1. 源序列嵌入（Source Embedding）
-       - 將源詞元轉換為向量
-       - 加入位置資訊
+    1. Source Embedding
+       - Converts source tokens to vectors
+       - Adds positional information
 
-    2. 目標序列嵌入（Target Embedding）
-       - 將目標詞元轉換為向量
-       - 加入位置資訊
+    2. Target Embedding
+       - Converts target tokens to vectors
+       - Adds positional information
 
     3. Encoder
-       - 處理源序列
-       - 使用雙向自注意力（可以看到整個輸入）
-       - 產生「記憶」（編碼表示）
+       - Processes source sequence
+       - Uses bidirectional self-attention (can see entire input)
+       - Produces "memory" (encoded representation)
 
     4. Decoder
-       - 生成目標序列
-       - 使用遮罩自注意力（只能看到之前的詞元）
-       - 使用交叉注意力到編碼器記憶
-       - 產生上下文化的表示
+       - Generates target sequence
+       - Uses masked self-attention (can only see previous tokens)
+       - Uses cross-attention to encoder memory
+       - Produces contextualized representations
 
-    5. 輸出投影（Output Projection）
-       - 將解碼器輸出映射到詞彙表 logits
-       - 每個位置得到所有可能詞元的機率分佈
+    5. Output Projection
+       - Maps decoder output to vocabulary logits
+       - Each position gets a probability distribution over all possible tokens
 
-    【完整資料流】
+    【Complete Data Flow】
 
-    訓練（已知目標）：
-        源：「I love AI」
-            ↓ [嵌入 + 位置]
-        Encoder → Memory：[「I love AI」的編碼表示]
+    Training (with known target):
+        Source: "I love AI"
+            ↓ [Embedding + Position]
+        Encoder → Memory: [encoded representation of "I love AI"]
             ↓
-        目標：「<start> 我 愛」
-            ↓ [嵌入 + 位置]
-        Decoder（+ Memory）→ 輸出：「我 愛 AI」
-            ↓ [線性投影]
-        Logits：[機率分佈]
+        Target: "<start> 我 爱"
+            ↓ [Embedding + Position]
+        Decoder (+ Memory) → Output: "我 爱 AI"
+            ↓ [Linear Projection]
+        Logits: [probability distributions]
 
-    推論（生成目標）：
-        源：「I love AI」
-            ↓ [嵌入 + 位置]
+    Inference (generate target):
+        Source: "I love AI"
+            ↓ [Embedding + Position]
         Encoder → Memory
             ↓
-        目標：「<start>」
-            ↓ [嵌入 + 位置]
-        Decoder（+ Memory）→ 「我」
+        Target: "<start>"
+            ↓ [Embedding + Position]
+        Decoder (+ Memory) → "我"
             ↓
-        目標：「<start> 我」
-            ↓ [嵌入 + 位置]
-        Decoder（+ Memory）→ 「愛」
+        Target: "<start> 我"
+            ↓ [Embedding + Position]
+        Decoder (+ Memory) → "爱"
             ↓
-        ...（繼續直到 <end> 詞元）
+        ... (continue until <end> token)
 
-    【關鍵設計決策】
+    【Key Design Decisions】
 
-    1. 共享 vs 獨立嵌入：
-       - 我們為源和目標使用獨立嵌入
-       - 它們可能有不同的詞彙表（例如英文 vs 中文）
-       - 但兩者都有相同的 d_model 維度
+    1. Shared vs Separate Embeddings:
+       - We use separate embeddings for source and target
+       - They might have different vocabularies (e.g., English vs Chinese)
+       - But both have the same d_model dimension
 
-    2. 權重綁定（Weight Tying）：
-       - 可選地，我們可以在目標嵌入和輸出投影之間共享權重
-       - 這減少了參數並經常改善性能
-       - 這裡為了清晰起見沒有實作
+    2. Weight Tying:
+       - Optionally, we can share weights between target embedding and output projection
+       - This reduces parameters and often improves performance
+       - Not implemented here for clarity
 
-    3. 位置編碼：
-       - 在 encoder/decoder 之前加到嵌入
-       - 使用正弦函數（sin/cos，不同頻率）
-       - 允許模型理解單字順序
+    3. Positional Encoding:
+       - Added to embeddings before encoder/decoder
+       - Uses sinusoidal functions (sin/cos with different frequencies)
+       - Allows model to understand word order
 
-    【形狀追蹤】
-    在整個模型中，我們維護這些形狀：
+    【Shape Tracking】
+    Throughout the model, we maintain these shapes:
 
-    - 源詞元：(batch, src_len)
-    - 目標詞元：(batch, tgt_len)
-    - 源嵌入：(batch, src_len, d_model)
-    - 目標嵌入：(batch, tgt_len, d_model)
-    - Encoder 輸出（memory）：(batch, src_len, d_model)
-    - Decoder 輸出：(batch, tgt_len, d_model)
-    - 最終 logits：(batch, tgt_len, tgt_vocab_size)
+    - Source tokens: (batch, src_len)
+    - Target tokens: (batch, tgt_len)
+    - Source embeddings: (batch, src_len, d_model)
+    - Target embeddings: (batch, tgt_len, d_model)
+    - Encoder output (memory): (batch, src_len, d_model)
+    - Decoder output: (batch, tgt_len, d_model)
+    - Final logits: (batch, tgt_len, tgt_vocab_size)
 
-    d_model 維度（通常 512）在整個模型中保持不變！
+    The d_model dimension (typically 512) is preserved throughout the entire model!
     """
 
     def __init__(
@@ -222,79 +222,79 @@ class Transformer(nn.Module):
         activation: str = "relu"
     ):
         """
-        初始化完整的 Transformer 模型
+        Initialize Complete Transformer Model
 
         Args:
-            src_vocab_size: 源詞彙表大小
-                範例：10000 表示 10,000 個英文單字
+            src_vocab_size: Size of source vocabulary
+                Example: 10000 for 10,000 English words
 
-            tgt_vocab_size: 目標詞彙表大小
-                範例：8000 表示 8,000 個中文字符
+            tgt_vocab_size: Size of target vocabulary
+                Example: 8000 for 8,000 Chinese characters
 
-            d_model: 模型維度（嵌入大小）
-                預設：512（來自原始論文）
-                這是模型的「寬度」
+            d_model: Dimension of model (embedding size)
+                Default: 512 (from original paper)
+                This is the "width" of the model
 
-            num_heads: 注意力頭的數量
-                預設：8（來自原始論文）
-                d_model 必須能被 num_heads 整除
+            num_heads: Number of attention heads
+                Default: 8 (from original paper)
+                d_model must be divisible by num_heads
 
-            num_encoder_layers: 要堆疊的編碼器層數
-                預設：6（來自原始論文）
-                更多層 = 更深的模型，可以學習更複雜的模式
+            num_encoder_layers: Number of encoder layers to stack
+                Default: 6 (from original paper)
+                More layers = deeper model, can learn more complex patterns
 
-            num_decoder_layers: 要堆疊的解碼器層數
-                預設：6（來自原始論文）
-                通常與 num_encoder_layers 相同
+            num_decoder_layers: Number of decoder layers to stack
+                Default: 6 (from original paper)
+                Typically same as num_encoder_layers
 
-            d_ff: 前饋網路的維度
-                預設：2048（來自原始論文）
-                通常是 d_model 的 4 倍
-                這是 FFN 中的「擴展因子」
+            d_ff: Dimension of feedforward network
+                Default: 2048 (from original paper)
+                Usually 4× the d_model
+                This is the "expansion factor" in FFN
 
-            dropout: 正則化的 Dropout 機率
-                預設：0.1（10% dropout）
-                通過隨機丟棄連接來防止過擬合
+            dropout: Dropout probability for regularization
+                Default: 0.1 (10% dropout)
+                Prevents overfitting by randomly dropping connections
 
-            max_seq_length: 最大序列長度
-                預設：5000
-                決定位置編碼表的大小
-                必須 ≥ 資料中最長的序列
+            max_seq_length: Maximum sequence length
+                Default: 5000
+                Determines size of positional encoding table
+                Must be ≥ longest sequence in your data
 
-            activation: FFN 中的激活函數
-                選項：「relu」或「gelu」
-                預設：「relu」（來自原始論文）
+            activation: Activation function in FFN
+                Options: "relu" or "gelu"
+                Default: "relu" (from original paper)
 
-        【參數數量範例】
-        使用預設設定（src_vocab=10000, tgt_vocab=8000）：
-        - 源嵌入：10000 × 512 = 5.1M 參數
-        - 目標嵌入：8000 × 512 = 4.1M 參數
-        - Encoder：每層 ~6M 參數 × 6 = 36M
-        - Decoder：每層 ~9M 參數 × 6 = 54M
-        - 輸出投影：512 × 8000 = 4.1M
-        - 總計：~103M 參數
+        【Parameter Count Example】
+        With default settings (src_vocab=10000, tgt_vocab=8000):
+        - Source embeddings: 10000 × 512 = 5.1M parameters
+        - Target embeddings: 8000 × 512 = 4.1M parameters
+        - Encoder: ~6M parameters per layer × 6 = 36M
+        - Decoder: ~9M parameters per layer × 6 = 54M
+        - Output projection: 512 × 8000 = 4.1M
+        - Total: ~103M parameters
 
-        按現代標準這是中等大小的模型。
-        對於 CPU 訓練，我們通常使用較小的值（d_model=256, layers=2-4）。
+        This is a medium-sized model by modern standards.
+        For CPU training, we typically use smaller values (d_model=256, layers=2-4).
         """
         super().__init__()
 
         # ============================================================
-        # 1. 嵌入層
+        # 1. Embedding Layers
         # ============================================================
-        # 將詞元 ID 轉換為連續向量
+        # Convert token IDs to continuous vectors
 
-        # 源嵌入（例如英文單字 → 向量）
+        # Source embedding (e.g., English words → vectors)
         self.src_embedding = TokenEmbedding(src_vocab_size, d_model)
 
-        # 目標嵌入（例如中文字符 → 向量）
+        # Target embedding (e.g., Chinese characters → vectors)
         self.tgt_embedding = TokenEmbedding(tgt_vocab_size, d_model)
 
         # ============================================================
-        # 2. 位置編碼
+        # 2. Positional Encoding
         # ============================================================
-        # 為嵌入加入位置資訊
-        # 在編碼器和解碼器之間共享，因為位置編碼是通用的
+        # Add position information to embeddings
+        # Shared between encoder and decoder since position encoding is universal
 
         self.positional_encoding = PositionalEncoding(
             d_model=d_model,
@@ -303,9 +303,9 @@ class Transformer(nn.Module):
         )
 
         # ============================================================
-        # 3. Encoder 堆疊
+        # 3. Encoder Stack
         # ============================================================
-        # 用雙向注意力處理源序列
+        # Process source sequence with bidirectional attention
 
         self.encoder = Encoder(
             d_model=d_model,
@@ -317,9 +317,9 @@ class Transformer(nn.Module):
         )
 
         # ============================================================
-        # 4. Decoder 堆疊
+        # 4. Decoder Stack
         # ============================================================
-        # 用遮罩自注意力 + 交叉注意力生成目標序列
+        # Generate target sequence with masked self-attention + cross-attention
 
         self.decoder = Decoder(
             d_model=d_model,
@@ -331,40 +331,40 @@ class Transformer(nn.Module):
         )
 
         # ============================================================
-        # 5. 輸出投影
+        # 5. Output Projection
         # ============================================================
-        # 將解碼器輸出映射到詞彙表 logits
-        # 從 d_model 維度投影到詞彙表大小
+        # Map decoder output to vocabulary logits
+        # Projects from d_model dimensions to vocabulary size
 
         self.output_projection = nn.Linear(d_model, tgt_vocab_size)
 
         # ============================================================
-        # 6. 初始化參數
+        # 6. Initialize Parameters
         # ============================================================
-        # 使用 Xavier/Glorot 初始化以獲得更好的訓練穩定性
-        # 這對深度網路很重要！
+        # Use Xavier/Glorot initialization for better training stability
+        # This is important for deep networks!
 
         self._init_parameters()
 
     def _init_parameters(self):
         """
-        使用 Xavier uniform 初始化模型參數
+        Initialize model parameters with Xavier uniform initialization
 
-        【為什麼要初始化？】
-        適當的初始化對訓練深度網路至關重要：
-        - 太小 → 梯度消失
-        - 太大 → 梯度爆炸
-        - Xavier 初始化平衡兩者
+        【Why Initialize?】
+        Proper initialization is crucial for training deep networks:
+        - Too small → vanishing gradients
+        - Too large → exploding gradients
+        - Xavier initialization balances both
 
-        【初始化什麼？】
-        - 線性層（權重和偏置）
-        - 嵌入層
+        【What Gets Initialized?】
+        - Linear layers (weights and biases)
+        - Embedding layers
 
-        LayerNorm 和其他元件有它們自己的預設初始化。
+        LayerNorm and other components have their own default initialization.
         """
         for p in self.parameters():
             if p.dim() > 1:
-                # 多維參數（權重）→ Xavier uniform
+                # Multi-dimensional parameters (weights) → Xavier uniform
                 nn.init.xavier_uniform_(p)
 
     def encode(
@@ -373,46 +373,46 @@ class Transformer(nn.Module):
         src_mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
-        編碼源序列
+        Encode source sequence
 
-        【這做什麼？】
-        通過以下步驟處理源序列（例如英文句子）：
-        1. 詞元嵌入
-        2. 位置編碼
-        3. Encoder 堆疊
+        【What Does This Do?】
+        Processes the source sequence (e.g., English sentence) through:
+        1. Token embedding
+        2. Positional encoding
+        3. Encoder stack
 
-        結果：「記憶」- 源的編碼表示
+        Result: "Memory" - encoded representation of the source
 
         Args:
-            src: 源詞元 ID，形狀 [batch_size, src_len]
-                範例：[[5, 42, 99, 103]]（4 個詞元）
+            src: Source token IDs, shape [batch_size, src_len]
+                Example: [[5, 42, 99, 103]] (4 tokens)
 
-            src_mask: 可選的源遮罩，形狀 [batch_size, 1, 1, src_len]
-                用於遮罩填充詞元
-                1 = 注意，0 = 忽略
+            src_mask: Optional mask for source, shape [batch_size, 1, 1, src_len]
+                Used to mask padding tokens
+                1 = attend, 0 = ignore
 
         Returns:
-            Encoder 輸出（記憶），形狀 [batch_size, src_len, d_model]
+            Encoder output (memory), shape [batch_size, src_len, d_model]
 
-        【範例流程】
-        輸入詞元：[5, 42, 99]
-            ↓ [詞元嵌入]
-        嵌入：[[0.23, ...], [0.81, ...], [-0.12, ...]]（每個 512 維）
-            ↓ [加入位置編碼]
-        位置感知：[[0.25, ...], [0.79, ...], [-0.15, ...]]
-            ↓ [Encoder 堆疊 - 6 層注意力 + FFN]
-        記憶：[[0.67, ...], [0.34, ...], [0.12, ...]]（編碼表示）
+        【Example Flow】
+        Input tokens: [5, 42, 99]
+            ↓ [Token Embedding]
+        Embeddings: [[0.23, ...], [0.81, ...], [-0.12, ...]]  (each 512-dim)
+            ↓ [Add Positional Encoding]
+        Position-aware: [[0.25, ...], [0.79, ...], [-0.15, ...]]
+            ↓ [Encoder Stack - 6 layers of attention + FFN]
+        Memory: [[0.67, ...], [0.34, ...], [0.12, ...]]  (encoded representation)
         """
-        # 步驟 1：將詞元 ID 轉換為嵌入
+        # Step 1: Convert token IDs to embeddings
         # src: (batch, src_len) → (batch, src_len, d_model)
         src_embedded = self.src_embedding(src)
 
-        # 步驟 2：加入位置編碼
-        # 告訴模型每個單字在序列中的位置
+        # Step 2: Add positional encoding
+        # Tells the model where each word is in the sequence
         src_encoded = self.positional_encoding(src_embedded)
 
-        # 步驟 3：通過編碼器堆疊
-        # 每層應用自注意力 + FFN
+        # Step 3: Pass through encoder stack
+        # Each layer applies self-attention + FFN
         memory = self.encoder(src_encoded, src_mask)
 
         return memory
@@ -425,58 +425,58 @@ class Transformer(nn.Module):
         src_mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
-        給定編碼器記憶解碼目標序列
+        Decode target sequence given encoder memory
 
-        【這做什麼？】
-        通過以下步驟處理目標序列（例如中文字符）：
-        1. 詞元嵌入
-        2. 位置編碼
-        3. Decoder 堆疊（可以訪問編碼器記憶）
+        【What Does This Do?】
+        Processes the target sequence (e.g., Chinese characters) through:
+        1. Token embedding
+        2. Positional encoding
+        3. Decoder stack (with access to encoder memory)
 
-        結果：準備好進行輸出投影的上下文化表示
+        Result: Contextualized representations ready for output projection
 
         Args:
-            tgt: 目標詞元 ID，形狀 [batch_size, tgt_len]
-                範例：[[1, 203, 456]]（3 個詞元，包括 <start>）
+            tgt: Target token IDs, shape [batch_size, tgt_len]
+                Example: [[1, 203, 456]] (3 tokens including <start>)
 
-            memory: Encoder 輸出，形狀 [batch_size, src_len, d_model]
-                編碼的源序列
+            memory: Encoder output, shape [batch_size, src_len, d_model]
+                The encoded source sequence
 
-            tgt_mask: 可選的因果遮罩，形狀 [batch_size, 1, tgt_len, tgt_len]
-                防止注意到未來位置
-                下三角矩陣：[[1,0,0], [1,1,0], [1,1,1]]
+            tgt_mask: Optional causal mask for target, shape [batch_size, 1, tgt_len, tgt_len]
+                Prevents attending to future positions
+                Lower triangular matrix: [[1,0,0], [1,1,0], [1,1,1]]
 
-            src_mask: 可選的源遮罩，形狀 [batch_size, 1, 1, src_len]
-                在交叉注意力中用於遮罩源填充
+            src_mask: Optional mask for source, shape [batch_size, 1, 1, src_len]
+                Used in cross-attention to mask source padding
 
         Returns:
-            Decoder 輸出，形狀 [batch_size, tgt_len, d_model]
+            Decoder output, shape [batch_size, tgt_len, d_model]
 
-        【範例流程 - 翻譯】
-        目標詞元：[<start>, 我, 愛]
-            ↓ [詞元嵌入]
-        嵌入：[[0.45, ...], [0.23, ...], [0.67, ...]]
-            ↓ [加入位置編碼]
-        位置感知：[[0.47, ...], [0.21, ...], [0.69, ...]]
-            ↓ [Decoder 堆疊 - 6 層]
-              每層：
-              - 遮罩自注意力（看之前的單字）
-              - 交叉注意力（看源：「I love AI」）
-              - 前饋網路
-        輸出：[[0.89, ...], [0.34, ...], [0.56, ...]]
+        【Example Flow - Translation】
+        Target tokens: [<start>, 我, 爱]
+            ↓ [Token Embedding]
+        Embeddings: [[0.45, ...], [0.23, ...], [0.67, ...]]
+            ↓ [Add Positional Encoding]
+        Position-aware: [[0.47, ...], [0.21, ...], [0.69, ...]]
+            ↓ [Decoder Stack - 6 layers]
+              Each layer:
+              - Masked self-attention (look at previous words)
+              - Cross-attention (look at source: "I love AI")
+              - Feedforward
+        Output: [[0.89, ...], [0.34, ...], [0.56, ...]]
         """
-        # 步驟 1：將詞元 ID 轉換為嵌入
+        # Step 1: Convert token IDs to embeddings
         # tgt: (batch, tgt_len) → (batch, tgt_len, d_model)
         tgt_embedded = self.tgt_embedding(tgt)
 
-        # 步驟 2：加入位置編碼
+        # Step 2: Add positional encoding
         tgt_encoded = self.positional_encoding(tgt_embedded)
 
-        # 步驟 3：通過解碼器堆疊
-        # 每層使用：
-        # - 目標上的遮罩自注意力
-        # - 到源（記憶）的交叉注意力
-        # - 前饋網路
+        # Step 3: Pass through decoder stack
+        # Each layer uses:
+        # - Masked self-attention on target
+        # - Cross-attention to source (memory)
+        # - Feedforward network
         output = self.decoder(tgt_encoded, memory, tgt_mask, src_mask)
 
         return output
@@ -489,85 +489,85 @@ class Transformer(nn.Module):
         tgt_mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
-        通過 Transformer 的完整前向傳播
+        Complete forward pass through the Transformer
 
-        【這做什麼？】
-        這是模型的主要入口點。它執行：
-        1. 編碼源序列 → 記憶
-        2. 使用記憶解碼目標序列 → 上下文化輸出
-        3. 投影到詞彙表 → logits
+        【What Does This Do?】
+        This is the main entry point for the model. It performs:
+        1. Encode source sequence → memory
+        2. Decode target sequence using memory → contextualized output
+        3. Project to vocabulary → logits
 
-        在訓練期間使用教師強迫（teacher forcing，提供正確目標）。
+        Used during training with teacher forcing (providing correct targets).
 
         Args:
-            src: 源詞元 ID，形狀 [batch_size, src_len]
-                範例：[[5, 42, 99, 103]]（英文單字）
+            src: Source token IDs, shape [batch_size, src_len]
+                Example: [[5, 42, 99, 103]] (English words)
 
-            tgt: 目標詞元 ID，形狀 [batch_size, tgt_len]
-                範例：[[1, 203, 456, 789]]（中文字符）
+            tgt: Target token IDs, shape [batch_size, tgt_len]
+                Example: [[1, 203, 456, 789]] (Chinese characters)
 
-            src_mask: 可選的源遮罩，形狀 [batch_size, 1, 1, src_len]
-                遮罩源中的填充
+            src_mask: Optional source mask, shape [batch_size, 1, 1, src_len]
+                Masks padding in source
 
-            tgt_mask: 可選的目標遮罩，形狀 [batch_size, 1, tgt_len, tgt_len]
-                遮罩目標中的填充和未來位置
-                通常是因果遮罩（下三角）
+            tgt_mask: Optional target mask, shape [batch_size, 1, tgt_len, tgt_len]
+                Masks padding and future positions in target
+                Typically a causal mask (lower triangular)
 
         Returns:
-            輸出 logits，形狀 [batch_size, tgt_len, tgt_vocab_size]
-            這些是 softmax 之前的原始分數
+            Output logits, shape [batch_size, tgt_len, tgt_vocab_size]
+            These are raw scores before softmax
 
-        【完整範例 - 機器翻譯】
+        【Complete Example - Machine Translation】
 
-        源：「I love AI」→ [5, 42, 99]
-        目標：「<start> 我 愛 AI」→ [1, 203, 456, 789]
+        Source: "I love AI" → [5, 42, 99]
+        Target: "<start> 我 爱 AI" → [1, 203, 456, 789]
 
-        步驟 1：編碼源
+        Step 1: Encode source
             [5, 42, 99]
-                ↓ 嵌入 + 位置
+                ↓ embedding + positional
             [[0.23, ...], [0.81, ...], [-0.12, ...]]
-                ↓ encoder（6 層自注意力 + FFN）
-            memory：[[0.67, ...], [0.34, ...], [0.12, ...]]
+                ↓ encoder (6 layers of self-attention + FFN)
+            memory: [[0.67, ...], [0.34, ...], [0.12, ...]]
 
-        步驟 2：解碼目標
+        Step 2: Decode target
             [1, 203, 456, 789]
-                ↓ 嵌入 + 位置
+                ↓ embedding + positional
             [[0.45, ...], [0.23, ...], [0.67, ...], [0.89, ...]]
-                ↓ decoder（6 層遮罩自注意力 + 交叉注意力 + FFN）
+                ↓ decoder (6 layers of masked self-attn + cross-attn + FFN)
             [[0.89, ...], [0.34, ...], [0.56, ...], [0.78, ...]]
 
-        步驟 3：投影到詞彙表
+        Step 3: Project to vocabulary
             [[0.89, ...], [0.34, ...], [0.56, ...], [0.78, ...]]
-                ↓ linear（d_model → tgt_vocab_size）
-            logits：[batch, 4, 8000]
-                位置 0：8000 個詞的機率分佈用於「我」
-                位置 1：8000 個詞的機率分佈用於「愛」
-                位置 2：8000 個詞的機率分佈用於「AI」
-                位置 3：8000 個詞的機率分佈用於 <end>
+                ↓ linear (d_model → tgt_vocab_size)
+            logits: [batch, 4, 8000]
+                Position 0: probability distribution over 8000 words for "我"
+                Position 1: probability distribution over 8000 words for "爱"
+                Position 2: probability distribution over 8000 words for "AI"
+                Position 3: probability distribution over 8000 words for <end>
 
-        【訓練 vs 推論】
+        【Training vs Inference】
 
-        訓練（教師強迫）：
-            - 我們有正確的目標序列
-            - 一次通過整個目標
-            - 使用因果遮罩防止作弊
-            - 快速且可並行化
+        Training (teacher forcing):
+            - We have the correct target sequence
+            - Pass entire target through at once
+            - Use causal mask to prevent cheating
+            - Fast and parallelizable
 
-        推論（自回歸）：
-            - 一次生成一個詞元
-            - 使用之前的預測作為輸入
-            - 較慢但對生成是必要的
-            - 參見下面的 generate() 方法
+        Inference (autoregressive):
+            - Generate one token at a time
+            - Use previous predictions as input
+            - Slower but necessary for generation
+            - See generate() method below
         """
-        # 步驟 1：編碼源序列
+        # Step 1: Encode source sequence
         # src: (batch, src_len) → memory: (batch, src_len, d_model)
         memory = self.encode(src, src_mask)
 
-        # 步驟 2：使用記憶解碼目標序列
+        # Step 2: Decode target sequence using memory
         # tgt: (batch, tgt_len) → output: (batch, tgt_len, d_model)
         output = self.decode(tgt, memory, tgt_mask, src_mask)
 
-        # 步驟 3：投影到詞彙表
+        # Step 3: Project to vocabulary
         # output: (batch, tgt_len, d_model) → logits: (batch, tgt_len, tgt_vocab_size)
         logits = self.output_projection(output)
 
@@ -582,118 +582,118 @@ class Transformer(nn.Module):
         end_token: int = 2
     ) -> torch.Tensor:
         """
-        自回歸生成目標序列（一次一個詞元）
+        Generate target sequence autoregressively (one token at a time)
 
-        【這做什麼？】
-        這在推論期間用於生成翻譯/回應。
-        與訓練不同（我們有完整目標），這裡我們：
-        1. 只從 <start> 詞元開始
-        2. 生成下一個詞元
-        3. 將它附加到序列
-        4. 重複直到 <end> 詞元或 max_len
+        【What Does This Do?】
+        This is used during inference to generate translations/responses.
+        Unlike training (where we have the full target), here we:
+        1. Start with just <start> token
+        2. Generate next token
+        3. Append it to sequence
+        4. Repeat until <end> token or max_len
 
-        這稱為「自回歸生成」- 每個詞元依賴於所有之前的詞元。
+        This is called "autoregressive generation" - each token depends on all previous tokens.
 
         Args:
-            src: 源詞元 ID，形狀 [batch_size, src_len]
-                要翻譯的輸入句子
+            src: Source token IDs, shape [batch_size, src_len]
+                The input sentence to translate
 
-            src_mask: 可選的源遮罩，形狀 [batch_size, 1, 1, src_len]
+            src_mask: Optional source mask, shape [batch_size, 1, 1, src_len]
 
-            max_len: 生成的最大長度
-                即使未達到 <end> 詞元也停止
+            max_len: Maximum length to generate
+                Stop even if <end> token not reached
 
-            start_token: <start> 詞元的 ID
-                通常是 1 或 <bos>（序列開始）
+            start_token: ID of <start> token
+                Typically 1 or <bos> (beginning of sequence)
 
-            end_token: <end> 詞元的 ID
-                通常是 2 或 <eos>（序列結束）
+            end_token: ID of <end> token
+                Typically 2 or <eos> (end of sequence)
 
         Returns:
-            生成的詞元 ID，形狀 [batch_size, generated_len]
+            Generated token IDs, shape [batch_size, generated_len]
 
-        【生成過程範例】
+        【Generation Process Example】
 
-        輸入：「I love AI」→ [5, 42, 99]
+        Input: "I love AI" → [5, 42, 99]
 
-        步驟 0：編碼源
+        Step 0: Encode source
             memory = encode([5, 42, 99])
 
-        步驟 1：從 <start> 開始
+        Step 1: Start with <start>
             tgt = [1]  # [<start>]
             logits = decode([1], memory)
-            next_token = argmax(logits[-1]) = 203  # 「我」
+            next_token = argmax(logits[-1]) = 203  # "我"
             tgt = [1, 203]
 
-        步驟 2：生成下一個詞元
+        Step 2: Generate next token
             tgt = [1, 203]  # [<start>, 我]
             logits = decode([1, 203], memory)
-            next_token = argmax(logits[-1]) = 456  # 「愛」
+            next_token = argmax(logits[-1]) = 456  # "爱"
             tgt = [1, 203, 456]
 
-        步驟 3：繼續...
-            tgt = [1, 203, 456]  # [<start>, 我, 愛]
+        Step 3: Continue...
+            tgt = [1, 203, 456]  # [<start>, 我, 爱]
             logits = decode([1, 203, 456], memory)
-            next_token = argmax(logits[-1]) = 789  # 「AI」
+            next_token = argmax(logits[-1]) = 789  # "AI"
             tgt = [1, 203, 456, 789]
 
-        步驟 4：結束
-            tgt = [1, 203, 456, 789]  # [<start>, 我, 愛, AI]
+        Step 4: End
+            tgt = [1, 203, 456, 789]  # [<start>, 我, 爱, AI]
             logits = decode([1, 203, 456, 789], memory)
             next_token = argmax(logits[-1]) = 2  # <end>
-            停止！返回 [1, 203, 456, 789, 2]
+            STOP! Return [1, 203, 456, 789, 2]
 
-        最終輸出（移除 <start>）：「我 愛 AI」
+        Final output (removing <start>): "我 爱 AI"
 
-        【為什麼這很慢？】
-        - 必須對長度為 N 的序列運行解碼器前向傳播 N 次
-        - 無法並行化 - 每個詞元依賴於之前的
-        - 這是自回歸模型的固有特性
-        - 現代優化：KV-caching（這裡未實作）
+        【Why Is This Slow?】
+        - Must run decoder forward pass N times for sequence of length N
+        - Can't parallelize - each token depends on previous
+        - This is inherent to autoregressive models
+        - Modern optimization: KV-caching (not implemented here)
         """
-        # 設置模型為評估模式
-        # 禁用 dropout 和其他訓練特定行為
+        # Set model to evaluation mode
+        # Disables dropout and other training-specific behaviors
         self.eval()
 
         batch_size = src.size(0)
         device = src.device
 
-        # 步驟 1：編碼源序列一次
-        # 我們只需要做一次，因為源不會改變
+        # Step 1: Encode source sequence once
+        # We only need to do this once since source doesn't change
         memory = self.encode(src, src_mask)
 
-        # 步驟 2：用 <start> 詞元初始化目標序列
-        # 形狀：(batch_size, 1) - 每個批次項目只有一個詞元
+        # Step 2: Initialize target sequence with <start> token
+        # Shape: (batch_size, 1) - just one token per batch item
         tgt = torch.full((batch_size, 1), start_token, dtype=torch.long, device=device)
 
-        # 步驟 3：一個一個生成詞元
-        with torch.no_grad():  # 推論期間不計算梯度
-            for _ in range(max_len - 1):  # -1 因為我們已經有 <start>
+        # Step 3: Generate tokens one by one
+        with torch.no_grad():  # Don't compute gradients during inference
+            for _ in range(max_len - 1):  # -1 because we already have <start>
 
-                # 為當前目標序列創建因果遮罩
-                # 確保我們只注意到之前的位置
+                # Create causal mask for current target sequence
+                # Ensures we only attend to previous positions
                 tgt_len = tgt.size(1)
                 tgt_mask = create_causal_mask(tgt_len).to(device)
 
-                # 解碼當前目標序列
+                # Decode current target sequence
                 # tgt: (batch, current_len) → output: (batch, current_len, d_model)
                 output = self.decode(tgt, memory, tgt_mask, src_mask)
 
-                # 將最後位置投影到詞彙表
+                # Project last position to vocabulary
                 # output[:, -1, :]: (batch, d_model) → logits: (batch, tgt_vocab_size)
                 logits = self.output_projection(output[:, -1, :])
 
-                # 獲取最可能的下一個詞元
-                # 對於每個批次項目，選擇分數最高的詞元
+                # Get most likely next token
+                # For each batch item, select token with highest score
                 # logits: (batch, tgt_vocab_size) → next_token: (batch, 1)
                 next_token = logits.argmax(dim=-1, keepdim=True)
 
-                # 將下一個詞元附加到序列
+                # Append next token to sequence
                 # tgt: (batch, current_len) → (batch, current_len + 1)
                 tgt = torch.cat([tgt, next_token], dim=1)
 
-                # 檢查批次中的所有序列是否都生成了 <end> 詞元
-                # 如果是，我們可以提前停止
+                # Check if all sequences in batch have generated <end> token
+                # If so, we can stop early
                 if (next_token == end_token).all():
                     break
 
@@ -701,19 +701,19 @@ class Transformer(nn.Module):
 
     def count_parameters(self) -> int:
         """
-        計算模型中可訓練參數的總數
+        Count total trainable parameters in the model
 
-        【為什麼這很重要？】
-        - 更大的模型更強大但訓練更慢
-        - 有助於估計記憶體需求
-        - 用於比較模型大小
+        【Why Does This Matter?】
+        - Larger models are more powerful but slower to train
+        - Helps estimate memory requirements
+        - Useful for comparing model sizes
 
         Returns:
-            可訓練參數的總數
+            Total number of trainable parameters
 
-        範例輸出：
-            預設配置約 103M 參數
-            小模型約 25M 參數（d_model=256, layers=2）
+        Example output:
+            ~103M parameters for default configuration
+            ~25M parameters for small model (d_model=256, layers=2)
         """
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
@@ -729,42 +729,42 @@ def create_transformer(
     max_seq_length: int = 5000
 ) -> Transformer:
     """
-    使用標準配置創建 Transformer 模型的工廠函數
+    Factory function to create a Transformer model with standard configuration
 
-    【為什麼使用這個？】
-    創建常見模型配置的便利函數。
-    確保編碼器和解碼器有相同數量的層（常見做法）。
+    【Why Use This?】
+    Convenience function for creating common model configurations.
+    Ensures encoder and decoder have the same number of layers (common practice).
 
     Args:
-        src_vocab_size: 源詞彙表大小
-        tgt_vocab_size: 目標詞彙表大小
-        d_model: 模型維度
-        num_heads: 注意力頭數量
-        num_layers: 層數（編碼器和解碼器相同）
-        d_ff: 前饋維度
-        dropout: Dropout 率
-        max_seq_length: 最大序列長度
+        src_vocab_size: Source vocabulary size
+        tgt_vocab_size: Target vocabulary size
+        d_model: Model dimension
+        num_heads: Number of attention heads
+        num_layers: Number of layers (same for encoder and decoder)
+        d_ff: Feedforward dimension
+        dropout: Dropout rate
+        max_seq_length: Maximum sequence length
 
     Returns:
-        初始化的 Transformer 模型
+        Initialized Transformer model
 
-    【常見配置】
+    【Common Configurations】
 
-    原始論文（Transformer Base）：
+    Original Paper (Transformer Base):
         d_model=512, num_heads=8, num_layers=6, d_ff=2048
-        約 60M 參數
+        ~60M parameters
 
-    Transformer Big：
+    Transformer Big:
         d_model=1024, num_heads=16, num_layers=6, d_ff=4096
-        約 210M 參數
+        ~210M parameters
 
-    小型（CPU 友善）：
+    Small (CPU-friendly):
         d_model=256, num_heads=4, num_layers=2, d_ff=1024
-        約 10M 參數（適合學習和小資料集）
+        ~10M parameters (good for learning and small datasets)
 
-    極小（非常快）：
+    Tiny (very fast):
         d_model=128, num_heads=4, num_layers=2, d_ff=512
-        約 3M 參數（演示用途）
+        ~3M parameters (demo purposes)
     """
     model = Transformer(
         src_vocab_size=src_vocab_size,

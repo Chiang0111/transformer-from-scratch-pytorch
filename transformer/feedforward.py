@@ -1,14 +1,14 @@
 """
-位置前饋網路（Position-wise Feedforward Network）
+Position-wise Feedforward Network
 
-為什麼需要？
-- Attention 只是重新組合資訊，沒有「轉換」資訊
-- FFN 提供非線性轉換，增加模型的表達能力
+Why is this needed?
+- Attention only rearranges information, doesn't transform it
+- FFN provides non-linear transformation, increasing model expressiveness
 
-架構：
+Architecture:
     Linear(d_model → d_ff) → Activation → Dropout → Linear(d_ff → d_model)
 
-通常 d_ff = 4 * d_model（例如：512 → 2048 → 512）
+Typically d_ff = 4 * d_model (e.g., 512 → 2048 → 512)
 """
 
 import torch
@@ -18,87 +18,57 @@ import torch.nn.functional as F
 
 class PositionwiseFeedForward(nn.Module):
     """
-    位置前饋網路（Position-wise Feedforward Network，簡稱 FFN）
+    Position-wise Feedforward Network (FFN)
 
-    【為什麼需要 FFN？Attention 還不夠嗎？】
-    問題：Attention 只是「重新組合」資訊，沒有「轉換」資訊！
+    【Why Do We Need FFN? Isn't Attention Enough?】
+    Problem: Attention only "rearranges" information, doesn't "transform" it!
 
-    類比理解：
-        Attention 像是「資訊搜尋」：
-        - Q: 我要找什麼？
-        - K: 有哪些資訊？
-        - V: 找到後給我對應的值
-        - 結果：把相關的資訊收集起來（加權平均）
+    Analogy:
+        Attention is like: Searching for books in a library (gathering information)
+        FFN is like: Reading and thinking about the books (processing information)
 
-        但這只是「組合」，沒有「轉換」！
-        就像你在圖書館找到了很多書，但還沒「讀」它們、沒「思考」它們
+    Technical perspective:
+        - Attention is essentially weighted averaging (linear combination)
+        - No non-linear transformation
+        - Cannot learn complex patterns
 
-    FFN 就是「思考」的過程：
-        - 對每個 token，獨立地進行非線性轉換
-        - 提供更複雜的特徵提取能力
-        - 增加模型的表達能力
+    FFN provides:
+        - Non-linear transformation (ReLU/GELU)
+        - Larger representation space (512 → 2048 → 512)
+        - Increases model expressiveness
 
-    【為什麼叫 "position-wise"（逐位置）？】
-    - 對序列中的每個位置（token）獨立處理
-    - 不像 Attention 會看整個序列，FFN 只看當前位置
-    - 但所有位置共享相同的權重（就像 CNN 的卷積核）
+    Architecture:
+    ```
+    Linear(d_model → d_ff) → Activation → Dropout → Linear(d_ff → d_model)
+    Example: Linear(512 → 2048) → ReLU → Dropout → Linear(2048 → 512)
+    ```
 
-    具體例子：
-        句子："我愛吃蘋果"（5 個字）
+    【What Does "Position-wise" Mean?】
+    - Processes each position (token) independently
+    - Unlike Attention which looks at the whole sequence
+    - But all positions share the same weights (like CNN)
 
-        Attention 的處理方式：
-        - "我" 可以看到 "我"、"愛"、"吃"、"蘋"、"果"（全局資訊）
-        - "愛" 可以看到 "我"、"愛"、"吃"、"蘋"、"果"（全局資訊）
-        - ...（每個詞都能看到所有詞）
+    【Why d_ff = 4 * d_model?】
+    - Original paper's setting ("Attention is All You Need")
+    - Empirically works well
+    - Provides sufficient capacity for learning complex features
 
-        FFN 的處理方式：
-        - "我" 只處理 "我" 自己（獨立）
-        - "愛" 只處理 "愛" 自己（獨立）
-        - "吃" 只處理 "吃" 自己（獨立）
-        - ...（每個詞獨立處理）
-        - 但所有詞都用同樣的 FFN 權重
+    【ReLU vs GELU】
+    - ReLU: max(0, x)
+      * Simple, fast
+      * May have "dying ReLU" problem
+      * Used in standard Transformer
 
-    【架構詳解：兩層 MLP】
-        架構：Linear(d_model → d_ff) → Activation → Dropout → Linear(d_ff → d_model)
-        例如：Linear(512 → 2048) → ReLU → Dropout → Linear(2048 → 512)
+    - GELU: Gaussian Error Linear Unit
+      * Smoother, often better performance
+      * Slightly slower
+      * Used by GPT, BERT
 
-        1. 第一層線性轉換：擴展維度（d_model → d_ff）
-           - 目的：提供更大的表示空間
-           - 類比：把資訊「展開」，給模型更多空間去學習複雜特徵
-           - 通常 d_ff = 4 * d_model（例如 512 → 2048）
-
-        2. 激活函數：ReLU 或 GELU
-           - 引入非線性（這是關鍵！）
-           - 為什麼需要非線性？
-             * 沒有非線性，多層線性變換 = 一層線性變換（無意義）
-             * 非線性讓模型可以學習複雜的模式
-           - ReLU: max(0, x)
-             * 優點：簡單、快速、梯度不會消失（正數部分）
-             * 缺點：可能有 "dying ReLU"（某些神經元永遠不激活）
-           - GELU: Gaussian Error Linear Unit
-             * 優點：更平滑、通常效果更好
-             * GPT、BERT 都用 GELU
-
-        3. Dropout：正則化
-           - 訓練時：隨機將一些神經元的輸出設為 0
-           - 目的：防止過擬合
-           - 迫使模型不依賴特定的神經元
-
-        4. 第二層線性轉換：壓縮回原維度（d_ff → d_model）
-           - 目的：回到原始維度，可以接下一層
-           - 類比：把「展開」的資訊「摘要」回來
-
-    【為什麼 d_ff = 4 * d_model？】
-        - 這是原論文（Attention is All You Need）的設定
-        - 經驗上效果不錯
-        - 提供足夠的容量（capacity）讓模型學習複雜特徵
-        - 例如：512 → 2048 → 512
-
-    參數：
-        d_model: 模型維度（輸入/輸出維度，如 512）
-        d_ff: 前饋網路的隱藏層維度（通常是 d_model 的 4 倍，如 2048）
-        dropout: Dropout 比例（預設 0.1）
-        activation: 激活函數類型，'relu' 或 'gelu'（預設 'relu'）
+    Args:
+        d_model: Model dimension (input/output dimension, e.g., 512)
+        d_ff: FFN hidden dimension (typically 4x d_model, e.g., 2048)
+        dropout: Dropout rate (default 0.1)
+        activation: Activation function type, 'relu' or 'gelu' (default 'relu')
     """
 
     def __init__(
@@ -110,242 +80,242 @@ class PositionwiseFeedForward(nn.Module):
     ):
         super().__init__()
 
-        # ========== 元件 1: 第一層線性轉換（擴展維度）==========
-        # d_model → d_ff（例如：512 → 2048）
+        # ========== Component 1: First Linear Layer (Expand) ==========
+        # d_model → d_ff (e.g., 512 → 2048)
         #
-        # 這是一個全連接層（Fully Connected Layer）
-        # 參數量：d_model * d_ff + d_ff
-        # 例如：512 * 2048 + 2048 = 1,050,624 個參數
+        # This is a fully connected layer
+        # Parameters: d_model * d_ff + d_ff
+        # Example: 512 * 2048 + 2048 = 1,050,624 parameters
         #
-        # 作用：把每個 token 的表示從 512 維「展開」到 2048 維
-        # → 提供更大的空間讓模型學習複雜特徵
+        # Purpose: Expand each token's representation from 512 to 2048 dims
+        # → Provides larger space for model to learn complex features
         self.linear1 = nn.Linear(d_model, d_ff)
 
-        # ========== 元件 2: 第二層線性轉換（壓縮回原維度）==========
-        # d_ff → d_model（例如：2048 → 512）
+        # ========== Component 2: Second Linear Layer (Compress) ==========
+        # d_ff → d_model (e.g., 2048 → 512)
         #
-        # 參數量：d_ff * d_model + d_model
-        # 例如：2048 * 512 + 512 = 1,049,088 個參數
+        # Parameters: d_ff * d_model + d_model
+        # Example: 2048 * 512 + 512 = 1,049,088 parameters
         #
-        # 作用：把 2048 維的表示「摘要」回 512 維
-        # → 回到原始維度，可以接下一層（或殘差連接）
+        # Purpose: Compress 2048-dim representation back to 512 dims
+        # → Return to original dimension, can connect to next layer (or residual)
         self.linear2 = nn.Linear(d_ff, d_model)
 
-        # ========== 元件 3: Dropout 層（正則化）==========
-        # Dropout 是一種正則化技術：
-        # - 訓練時：隨機將一些神經元的輸出設為 0（以機率 dropout）
-        # - 測試時：不做任何改變（自動關閉）
+        # ========== Component 3: Dropout Layer (Regularization) ==========
+        # Dropout is a regularization technique:
+        # - Training: randomly set some neuron outputs to 0 (with probability dropout)
+        # - Testing: no change (automatically disabled)
         #
-        # 為什麼有效？
-        # - 防止模型過度依賴特定的神經元
-        # - 迫使模型學習更魯棒的特徵
-        # - 類似「訓練時隨機遮住一些資訊，讓模型學會用剩下的資訊」
+        # Why effective?
+        # - Prevents model from over-relying on specific neurons
+        # - Forces model to learn more robust features
+        # - Similar to "training with partial information, so model learns to use what remains"
         #
-        # dropout=0.1 表示有 10% 的神經元會被隨機關閉
+        # dropout=0.1 means 10% of neurons are randomly disabled
         self.dropout = nn.Dropout(dropout)
 
-        # ========== 元件 4: 激活函數選擇 ==========
-        # 儲存激活函數的類型（'relu' 或 'gelu'）
-        # 實際的激活計算在 forward 方法中進行
+        # ========== Component 4: Activation Function Selection ==========
+        # Store activation function type ('relu' or 'gelu')
+        # Actual activation computation happens in forward method
         self.activation = activation
 
-        # 驗證激活函數類型
-        # 只允許 'relu' 或 'gelu'
-        # 其他的（如 'sigmoid', 'tanh'）在 Transformer 中效果不好
+        # Validate activation function type
+        # Only allow 'relu' or 'gelu'
+        # Others (like 'sigmoid', 'tanh') don't work well in Transformer
         if activation not in ['relu', 'gelu']:
-            raise ValueError(f"activation 必須是 'relu' 或 'gelu'，但得到 '{activation}'")
+            raise ValueError(f"activation must be 'relu' or 'gelu', got '{activation}'")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        前向傳播
+        Forward pass
 
-        參數：
-            x: shape (batch_size, seq_len, d_model)
-               輸入張量（通常是 Attention 的輸出）
+        Args:
+            x: Input tensor of shape (batch_size, seq_len, d_model)
+               (typically output from Attention)
 
-        回傳：
-            output: shape (batch_size, seq_len, d_model)
-                   輸出張量（維度與輸入相同）
+        Returns:
+            output: Output tensor of shape (batch_size, seq_len, d_model)
+                   (same dimension as input)
 
-        完整流程：
+        Complete flow:
             x → Linear1 → Activation → Dropout → Linear2
 
-        具體範例（以 "我愛吃蘋果" 為例）：
-            假設輸入 x.shape = (2, 5, 512)
-            - batch_size = 2（兩個句子）
-            - seq_len = 5（每個句子 5 個字）
-            - d_model = 512（每個字用 512 維向量表示）
+        Concrete example ("I love eating apples"):
+            Assume input x.shape = (2, 5, 512)
+            - batch_size = 2 (two sentences)
+            - seq_len = 5 (5 words each)
+            - d_model = 512 (each word in 512-dim vector)
 
-            步驟 1: Linear1（擴展）
-                輸入：(2, 5, 512)
+            Step 1: Linear1 (Expand)
+                Input: (2, 5, 512)
                 linear1(x) → (2, 5, 2048)
-                → 每個字從 512 維擴展到 2048 維
+                → Each word expanded from 512 to 2048 dims
 
-            步驟 2: Activation（非線性轉換）
-                輸入：(2, 5, 2048)
+            Step 2: Activation (Non-linear transformation)
+                Input: (2, 5, 2048)
                 activation → (2, 5, 2048)
-                → 引入非線性，讓模型可以學習複雜模式
-                → shape 不變，但值改變了
+                → Introduces non-linearity, allows learning complex patterns
+                → Shape unchanged, but values transformed
 
-                ReLU 例子：
-                    輸入: [-2, -1, 0, 1, 2]
-                    輸出: [0, 0, 0, 1, 2]  ← 負數變 0，正數不變
+                ReLU example:
+                    Input: [-2, -1, 0, 1, 2]
+                    Output: [0, 0, 0, 1, 2]  ← negatives become 0, positives unchanged
 
-                GELU 例子：
-                    輸入: [-2, -1, 0, 1, 2]
-                    輸出: [-0.05, -0.16, 0, 0.84, 1.95]  ← 更平滑
+                GELU example:
+                    Input: [-2, -1, 0, 1, 2]
+                    Output: [-0.05, -0.16, 0, 0.84, 1.95]  ← smoother
 
-            步驟 3: Dropout（正則化）
-                訓練時：隨機將 10% 的值設為 0
-                輸入: [1, 2, 3, 4, 5]
-                輸出: [0, 2, 3, 0, 5]  ← 隨機（每次不同）
+            Step 3: Dropout (Regularization)
+                Training: randomly set 10% of values to 0
+                Input: [1, 2, 3, 4, 5]
+                Output: [0, 2, 3, 0, 5]  ← random (different each time)
 
-                測試時：不做任何改變
-                輸入: [1, 2, 3, 4, 5]
-                輸出: [1, 2, 3, 4, 5]  ← 完全相同
+                Testing: no change
+                Input: [1, 2, 3, 4, 5]
+                Output: [1, 2, 3, 4, 5]  ← exactly the same
 
-            步驟 4: Linear2（壓縮）
-                輸入：(2, 5, 2048)
+            Step 4: Linear2 (Compress)
+                Input: (2, 5, 2048)
                 linear2 → (2, 5, 512)
-                → 從 2048 維壓縮回 512 維
+                → Compressed from 2048 back to 512 dims
 
-            最終輸出：(2, 5, 512)
-            → 與輸入 shape 相同，可以接殘差連接或下一層
+            Final output: (2, 5, 512)
+            → Same shape as input, can connect to residual or next layer
         """
-        # ========== 步驟 1: 第一層線性轉換 + 激活函數 ==========
+        # ========== Step 1: First Linear Layer + Activation ==========
         # shape: (batch_size, seq_len, d_model) → (batch_size, seq_len, d_ff)
-        # 例如：(2, 5, 512) → (2, 5, 2048)
+        # Example: (2, 5, 512) → (2, 5, 2048)
 
         if self.activation == 'relu':
-            # ReLU（Rectified Linear Unit）: max(0, x)
-            # 數學定義：
+            # ReLU (Rectified Linear Unit): max(0, x)
+            # Mathematical definition:
             #   f(x) = x  if x > 0
             #   f(x) = 0  if x ≤ 0
             #
-            # 優點：
-            # ✓ 計算簡單、速度快
-            # ✓ 不會有梯度消失問題（正數部分梯度恆為 1）
+            # Advantages:
+            # ✓ Simple, fast computation
+            # ✓ No gradient vanishing (positive part has gradient 1)
             #
-            # 缺點：
-            # ✗ "Dying ReLU" 問題：如果某個神經元的輸入總是負數
-            #   它的輸出永遠是 0，梯度永遠是 0，再也學不到東西
+            # Disadvantages:
+            # ✗ "Dying ReLU" problem: if a neuron's input is always negative
+            #   its output is always 0, gradient is always 0, can never learn
             #
-            # 適用：標準 Transformer（原論文用這個）
+            # Use case: Standard Transformer (original paper)
             hidden = F.relu(self.linear1(x))
 
         else:  # gelu
-            # GELU（Gaussian Error Linear Unit）
-            # 數學定義（近似）：
+            # GELU (Gaussian Error Linear Unit)
+            # Mathematical definition (approximate):
             #   f(x) ≈ 0.5 * x * (1 + tanh(√(2/π) * (x + 0.044715 * x^3)))
             #
-            # 直覺理解：
-            # - 類似 ReLU，但更平滑
-            # - 負數不會完全變 0，而是接近 0
-            # - 有一點「機率」的概念（基於高斯分布）
+            # Intuition:
+            # - Similar to ReLU but smoother
+            # - Negative values don't become exactly 0, just close to 0
+            # - Has a probabilistic interpretation (based on Gaussian distribution)
             #
-            # 優點：
-            # ✓ 更平滑（沒有 ReLU 的硬轉折）
-            # ✓ 實驗上通常效果更好
-            # ✓ 不會有 "Dying ReLU" 問題
+            # Advantages:
+            # ✓ Smoother (no sharp corner at x=0)
+            # ✓ Empirically better performance
+            # ✓ No "dying ReLU" problem
             #
-            # 缺點：
-            # ✗ 計算稍慢（公式更複雜）
+            # Disadvantages:
+            # ✗ Slightly slower (more complex formula)
             #
-            # 適用：GPT、BERT 等現代模型都用這個
+            # Use case: GPT, BERT (modern models)
             hidden = F.gelu(self.linear1(x))
 
-        # 現在 hidden.shape = (batch_size, seq_len, d_ff)
-        # 例如：(2, 5, 2048)
+        # Now hidden.shape = (batch_size, seq_len, d_ff)
+        # Example: (2, 5, 2048)
 
-        # ========== 步驟 2: Dropout ==========
-        # Dropout 只在訓練時啟用！
+        # ========== Step 2: Dropout ==========
+        # Dropout only active during training!
         #
-        # 訓練模式（model.train()）：
-        # - 隨機將一些神經元的輸出設為 0
-        # - 機率由 dropout 參數決定（這裡是 0.1 = 10%）
-        # - 剩下的值會放大（乘以 1/(1-dropout)），保持期望值不變
+        # Training mode (model.train()):
+        # - Randomly set some values to 0
+        # - Probability determined by dropout parameter (here 0.1 = 10%)
+        # - Remaining values are scaled up (multiply by 1/(1-dropout)) to maintain expected value
         #
-        # 評估模式（model.eval()）：
-        # - 完全不做任何改變
-        # - 所有神經元都保留
+        # Evaluation mode (model.eval()):
+        # - Completely unchanged
+        # - All neurons active
         #
-        # 為什麼訓練和測試不一樣？
-        # - 訓練：希望模型不要過度依賴某些神經元 → 隨機關閉一些
-        # - 測試：希望模型發揮全部實力 → 所有神經元都用
+        # Why different in training vs testing?
+        # - Training: want model not to over-rely on certain neurons → randomly disable some
+        # - Testing: want model to use full power → all neurons active
         hidden = self.dropout(hidden)
 
-        # ========== 步驟 3: 第二層線性轉換 ==========
+        # ========== Step 3: Second Linear Layer ==========
         # shape: (batch_size, seq_len, d_ff) → (batch_size, seq_len, d_model)
-        # 例如：(2, 5, 2048) → (2, 5, 512)
+        # Example: (2, 5, 2048) → (2, 5, 512)
         #
-        # 目的：
-        # - 壓縮回原始維度
-        # - 可以接殘差連接（x + FFN(x)）
-        # - 可以接下一層 Encoder Layer
+        # Purpose:
+        # - Compress back to original dimension
+        # - Can connect to residual connection (x + FFN(x))
+        # - Can connect to next Encoder Layer
         output = self.linear2(hidden)
 
-        # 最終輸出 shape: (batch_size, seq_len, d_model)
-        # 例如：(2, 5, 512)
-        # → 與輸入 x 的 shape 完全相同
+        # Final output shape: (batch_size, seq_len, d_model)
+        # Example: (2, 5, 512)
+        # → Same shape as input x
         return output
 
 
 class GatedFeedForward(nn.Module):
     """
-    門控前饋網路（進階版本，可選）
+    Gated Feedforward Network (advanced version, optional)
 
-    這是 FFN 的改進版本，使用門控機制（類似 LSTM 的門）。
-    某些現代 Transformer 變體（如 GLU）使用這種架構。
+    This is an improved version of FFN using gating mechanism (similar to LSTM gates).
+    Some modern Transformer variants (e.g., GLU) use this architecture.
 
-    架構：
+    Architecture:
         output = Linear2(GELU(Linear1_1(x)) ⊙ Linear1_2(x))
 
-    其中 ⊙ 是逐元素相乘
+    where ⊙ is element-wise multiplication
 
-    為什麼更好？
-    - 門控機制讓模型學習「哪些資訊要通過」
-    - 通常比標準 FFN 效果更好，但參數量多一倍
+    Why is it better?
+    - Gating mechanism lets model learn "which information to pass through"
+    - Often better performance than standard FFN, but 2x parameters
 
-    參數：
-        d_model: 模型維度
-        d_ff: 前饋網路的隱藏層維度
-        dropout: Dropout 比例
+    Args:
+        d_model: Model dimension
+        d_ff: Hidden dimension of feedforward network
+        dropout: Dropout rate
     """
 
     def __init__(self, d_model: int, d_ff: int, dropout: float = 0.1):
         super().__init__()
 
-        # 兩個並行的線性層（用於門控）
+        # Two parallel linear layers (for gating)
         self.linear1_1 = nn.Linear(d_model, d_ff)
         self.linear1_2 = nn.Linear(d_model, d_ff)
 
-        # 輸出線性層
+        # Output linear layer
         self.linear2 = nn.Linear(d_ff, d_model)
 
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        門控前饋網路的前向傳播
+        Forward pass for gated feedforward network
 
-        參數：
-            x: shape (batch_size, seq_len, d_model)
+        Args:
+            x: Input tensor of shape (batch_size, seq_len, d_model)
 
-        回傳：
-            output: shape (batch_size, seq_len, d_model)
+        Returns:
+            output: Output tensor of shape (batch_size, seq_len, d_model)
         """
-        # 計算兩個分支
-        # 分支 1: 激活後的值
+        # Compute two branches
+        # Branch 1: activated values
         activated = F.gelu(self.linear1_1(x))
 
-        # 分支 2: 門控值（決定哪些資訊通過）
+        # Branch 2: gate values (decides which information passes through)
         gate = self.linear1_2(x)
 
-        # 逐元素相乘（門控機制）
-        # gate 的值決定 activated 中哪些值要保留
+        # Element-wise multiplication (gating mechanism)
+        # gate values determine which parts of activated to keep
         gated = activated * gate
 
-        # Dropout 和最後的線性層
+        # Dropout and final linear layer
         gated = self.dropout(gated)
         output = self.linear2(gated)
 
@@ -353,37 +323,37 @@ class GatedFeedForward(nn.Module):
 
 
 if __name__ == "__main__":
-    # 測試程式碼
-    print("=== 測試位置前饋網路 ===\n")
+    # Test code
+    print("=== Testing Position-wise Feedforward Network ===\n")
 
     batch_size = 2
     seq_len = 10
     d_model = 512
     d_ff = 2048
 
-    # 建立 FFN
+    # Create FFN
     ffn = PositionwiseFeedForward(d_model, d_ff)
 
-    # 建立假輸入
+    # Create dummy input
     x = torch.randn(batch_size, seq_len, d_model)
-    print(f"輸入 shape: {x.shape}")
+    print(f"Input shape: {x.shape}")
 
-    # 前向傳播
+    # Forward pass
     output = ffn(x)
-    print(f"輸出 shape: {output.shape}")
+    print(f"Output shape: {output.shape}")
 
-    # 檢查參數數量
+    # Check parameter count
     total_params = sum(p.numel() for p in ffn.parameters())
-    print(f"\n總參數量: {total_params:,}")
-    print(f"Linear1 參數: {d_model * d_ff + d_ff:,}")
-    print(f"Linear2 參數: {d_ff * d_model + d_model:,}")
+    print(f"\nTotal parameters: {total_params:,}")
+    print(f"Linear1 params: {d_model * d_ff + d_ff:,}")
+    print(f"Linear2 params: {d_ff * d_model + d_model:,}")
 
-    # 測試門控版本
-    print("\n=== 測試門控前饋網路 ===\n")
+    # Test gated version
+    print("\n=== Testing Gated Feedforward Network ===\n")
     gated_ffn = GatedFeedForward(d_model, d_ff)
     output_gated = gated_ffn(x)
-    print(f"門控 FFN 輸出 shape: {output_gated.shape}")
+    print(f"Gated FFN output shape: {output_gated.shape}")
 
     gated_params = sum(p.numel() for p in gated_ffn.parameters())
-    print(f"門控 FFN 總參數量: {gated_params:,}")
-    print(f"（約是標準 FFN 的 {gated_params / total_params:.1f} 倍）")
+    print(f"Gated FFN total parameters: {gated_params:,}")
+    print(f"(approximately {gated_params / total_params:.1f}x standard FFN)")

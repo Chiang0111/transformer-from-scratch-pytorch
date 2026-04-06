@@ -2,7 +2,7 @@
 from datasets import create_dataloader
 
 # Create small dataset
-train_loader, val_loader, dataset_info = create_dataloader(
+train_loader, val_loader, test_loader, dataset_info = create_dataloader(
     dataset_type='copy',
     batch_size=2,
     num_samples=5,

@@ -1,24 +1,24 @@
 """
-Transformer 解码器层
+Transformer Decoder Layer
 
-整合所有组件：
-1. 掩码多头自注意力
-2. 残差连接 + 层归一化
-3. 交叉注意力到编码器输出
-4. 残差连接 + 层归一化
-5. 位置前馈网络
-6. 残差连接 + 层归一化
+Integrates all components:
+1. Masked Multi-Head Self-Attention
+2. Residual Connection + Layer Normalization
+3. Cross-Attention to Encoder Output
+4. Residual Connection + Layer Normalization
+5. Position-wise Feedforward Network
+6. Residual Connection + Layer Normalization
 
-架构：
-    输入
+Architecture:
+    Input
      ↓
-    [掩码自注意力] → Add & Norm
+    [Masked Self-Attention] → Add & Norm
      ↓
-    [交叉注意力到编码器] → Add & Norm
+    [Cross-Attention to Encoder] → Add & Norm
      ↓
-    [前馈网络] → Add & Norm
+    [Feedforward Network] → Add & Norm
      ↓
-    输出
+    Output
 """
 
 import torch
@@ -31,159 +31,159 @@ from .feedforward import PositionwiseFeedForward
 
 class DecoderLayer(nn.Module):
     """
-    Transformer 解码器层
+    Transformer Decoder Layer
 
-    【这是什么？】
-    这是 Transformer 解码器的核心构建块！
-    完整的解码器由多个 DecoderLayer 堆叠而成（通常是 6 层）
+    【What Is This?】
+    This is the core building block of the Transformer Decoder!
+    A complete Decoder consists of multiple DecoderLayers stacked (typically 6 layers)
 
-    【与编码器的关键区别】
-    编码器有 2 个子层，解码器有 3 个子层：
+    【Key Difference from Encoder】
+    Encoder has 2 sub-layers, Decoder has 3 sub-layers:
 
-    编码器：
-        1. 自注意力（看整个输入句子）
-        2. 前馈网络
+    Encoder:
+        1. Self-Attention (看整个输入句子)
+        2. Feedforward
 
-    解码器：
-        1. 掩码自注意力（只能看已生成的部分，不能看未来）
-        2. 交叉注意力（看编码器的输出，获取源语言信息）
-        3. 前馈网络
+    Decoder:
+        1. Masked Self-Attention (只能看已生成的部分，不能看未来)
+        2. Cross-Attention (看 Encoder 的输出，获取源语言信息)
+        3. Feedforward
 
-    【完整架构】
-        输入 x (batch, tgt_len, d_model)
+    【Complete Architecture】
+        Input x (batch, tgt_len, d_model)
          ↓
         ┌─────────────────────────────────────┐
-        │  掩码多头自注意力                    │  ← 子层 1: 看已生成的词
+        │  Masked Multi-Head Self-Attention   │  ← Sub-layer 1: Look at generated tokens
         └─────────────────────────────────────┘
          ↓
-        Add & Norm  ← x + MaskedAttention(x), 然后归一化
+        Add & Norm  ← x + MaskedAttention(x), then normalize
          ↓
         ┌─────────────────────────────────────┐
-        │  多头交叉注意力                      │  ← 子层 2: 从编码器获取信息
-        │  (Q 来自解码器, K,V 来自编码器)      │
+        │  Multi-Head Cross-Attention         │  ← Sub-layer 2: Get info from encoder
+        │  (Q from decoder, K,V from encoder) │
         └─────────────────────────────────────┘
          ↓
-        Add & Norm  ← x + CrossAttention(x, enc), 然后归一化
+        Add & Norm  ← x + CrossAttention(x, enc), then normalize
          ↓
         ┌─────────────────────────────────────┐
-        │  前馈网络 (FFN)                      │  ← 子层 3: 处理信息
+        │  Feedforward Network (FFN)          │  ← Sub-layer 3: Process information
         └─────────────────────────────────────┘
          ↓
-        Add & Norm  ← x + FFN(x), 然后归一化
+        Add & Norm  ← x + FFN(x), then normalize
          ↓
-        输出 (batch, tgt_len, d_model)
+        Output (batch, tgt_len, d_model)
 
-    【什么是掩码自注意力？】
-    问题：在语言生成中，我们一次生成一个词
-    - 生成第 3 个词时，我们只看到了第 0, 1, 2 个词
-    - 我们不能看到第 4, 5, 6... 个词（它们还不存在！）
+    【What Is Masked Self-Attention?】
+    Problem: In language generation, we generate one word at a time
+    - When generating word 3, we've only seen words 0, 1, 2
+    - We CANNOT see words 4, 5, 6... (they don't exist yet!)
 
-    解决方案：使用因果掩码（也叫前瞻掩码）
-    - 处理位置 i 时，只能注意到位置 ≤ i 的内容
-    - 防止"作弊"看到未来的词
+    Solution: Use causal mask (also called look-ahead mask)
+    - When processing position i, can only attend to positions ≤ i
+    - Prevents "cheating" by looking at future tokens
 
-    具体例子："我 喜欢 吃 苹果"
-        位置 0 ("我"):     能看到: ["我"]
-        位置 1 ("喜欢"):   能看到: ["我", "喜欢"]
-        位置 2 ("吃"):     能看到: ["我", "喜欢", "吃"]
-        位置 3 ("苹果"):   能看到: ["我", "喜欢", "吃", "苹果"]
+    Concrete example: "I love eating apples"
+        Position 0 ("I"):      can see: ["I"]
+        Position 1 ("love"):   can see: ["I", "love"]
+        Position 2 ("eating"): can see: ["I", "love", "eating"]
+        Position 3 ("apples"): can see: ["I", "love", "eating", "apples"]
 
-    掩码矩阵 (1 = 能看到, 0 = 看不到):
-        [[1, 0, 0, 0],  ← 位置 0 只能看到位置 0
-         [1, 1, 0, 0],  ← 位置 1 能看到位置 0-1
-         [1, 1, 1, 0],  ← 位置 2 能看到位置 0-2
-         [1, 1, 1, 1]]  ← 位置 3 能看到位置 0-3
+    Mask matrix (1 = can see, 0 = cannot see):
+        [[1, 0, 0, 0],  ← position 0 sees only position 0
+         [1, 1, 0, 0],  ← position 1 sees positions 0-1
+         [1, 1, 1, 0],  ← position 2 sees positions 0-2
+         [1, 1, 1, 1]]  ← position 3 sees positions 0-3
 
-    【什么是交叉注意力？】
-    目的：让解码器"看到"编码器的输出
-    - 在翻译中：解码器看源句子（英语）
-                来生成目标句子（法语）
+    【What Is Cross-Attention?】
+    Purpose: Let decoder "look at" the encoder's output
+    - In translation: decoder looks at source sentence (English)
+                     to generate target sentence (French)
 
-    机制：与自注意力不同！
-    - 自注意力：Q, K, V 都来自同一个输入（解码器）
-    - 交叉注意力：Q 来自解码器，K 和 V 来自编码器
+    Mechanism: Different from self-attention!
+    - Self-Attention: Q, K, V all from same input (decoder)
+    - Cross-Attention: Q from decoder, K and V from encoder
 
-    类比：
-        自注意力：  "我到目前为止说了什么？"
-        交叉注意力："原始句子说了什么？"
+    Analogy:
+        Self-Attention: "What have I said so far?"
+        Cross-Attention: "What did the original sentence say?"
 
-    具体例子（英语→法语翻译）：
-        编码器输入：  "I love eating apples"
-        解码器生成中："J'aime manger ..."
+    Concrete example (English→French translation):
+        Encoder input: "I love eating apples"
+        Decoder generating: "J'aime manger ..."
 
-        生成 "manger" (eating) 时：
-        - 掩码自注意力：看 ["J'aime"]
-        - 交叉注意力：  看 ["I", "love", "eating", "apples"]
-                       发现 "eating" 最相关！
-        → 帮助生成正确的词 "manger"
+        When generating "manger" (eating):
+        - Masked Self-Attention: looks at ["J'aime"]
+        - Cross-Attention: looks at ["I", "love", "eating", "apples"]
+                          finds "eating" is most relevant!
+        → Helps generate correct word "manger"
 
-    【为什么是这个顺序？】
-    1. 先掩码自注意力：理解我们已经生成的内容
-       - 看目标序列到目前为止生成的内容
-       - 从之前生成的词中构建上下文
+    【Why This Order?】
+    1. Masked Self-Attention first: understand what we've generated
+       - Look at the target sequence generated so far
+       - Build context from previously generated words
 
-    2. 然后交叉注意力：从源获取信息
-       - 看编码器输出（源句子）
-       - 找到现在哪些源词相关
+    2. Cross-Attention next: get information from source
+       - Look at encoder output (source sentence)
+       - Find which source words are relevant now
 
-    3. 最后前馈网络：处理组合信息
-       - 组合"我们已生成的"和"源句子"的信息
-       - 非线性变换
-       - 为下一层或最终预测做准备
+    3. FFN last: process combined information
+       - Combine info from "what we've generated" and "source sentence"
+       - Non-linear transformation
+       - Prepare for next layer or final prediction
 
-    【完整流程示例】
-    假设：英语→法语翻译
-    源：  "I love apples" (已经被编码器编码)
-    目标到目前为止："J'aime" (法语 "I love")
-    现在生成：下一个词（应该是 "les" 之类的）
+    【Complete Flow Example】
+    Assume: English→French translation
+    Source: "I love apples" (already encoded by Encoder)
+    Target so far: "J'aime" (French for "I love")
+    Now generating: next word (should be "les" or something)
 
-    输入：
-        x = ["J'", "aime", "<CURRENT>"] 的嵌入
+    Input:
+        x = embeddings of ["J'", "aime", "<CURRENT>"]
         x.shape = (1, 3, 512)  # batch=1, tgt_len=3, d_model=512
-        encoder_output = 编码后的 "I love apples"
+        encoder_output = encoded "I love apples"
         encoder_output.shape = (1, 3, 512)  # batch=1, src_len=3, d_model=512
 
-    步骤 1：掩码自注意力
-        - "J'" 看：["J'"]
-        - "aime" 看：["J'", "aime"]
-        - "<CURRENT>" 看：["J'", "aime", "<CURRENT>"]
-        → 每个词知道它之前的内容
+    Step 1: Masked Self-Attention
+        - "J'" sees: ["J'"]
+        - "aime" sees: ["J'", "aime"]
+        - "<CURRENT>" sees: ["J'", "aime", "<CURRENT>"]
+        → Each token knows what came before it
         → masked_attn_output.shape = (1, 3, 512)
 
-    步骤 2：Add & Norm（第一次）
-        - x = x + masked_attn_output （残差）
-        - x = LayerNorm(x) （归一化）
+    Step 2: Add & Norm (first)
+        - x = x + masked_attn_output (residual)
+        - x = LayerNorm(x) (normalize)
         → x.shape = (1, 3, 512)
 
-    步骤 3：交叉注意力
-        - Q 来自解码器："我在源中寻找什么？"
-        - K, V 来自编码器："这是源句子的内容"
-        - "<CURRENT>" 可能高度注意 "apples"
+    Step 3: Cross-Attention
+        - Q from decoder: "what am I looking for in source?"
+        - K, V from encoder: "here's the source sentence"
+        - "<CURRENT>" might attend highly to "apples"
         → cross_attn_output.shape = (1, 3, 512)
 
-    步骤 4：Add & Norm（第二次）
-        - x = x + cross_attn_output （残差）
-        - x = LayerNorm(x) （归一化）
+    Step 4: Add & Norm (second)
+        - x = x + cross_attn_output (residual)
+        - x = LayerNorm(x) (normalize)
         → x.shape = (1, 3, 512)
 
-    步骤 5：前馈网络
-        - 独立处理每个位置
-        - 512 → 2048 → 512 （扩展→变换→压缩）
+    Step 5: FFN
+        - Process each position independently
+        - 512 → 2048 → 512 (expand→transform→compress)
         → ff_output.shape = (1, 3, 512)
 
-    步骤 6：Add & Norm（第三次）
-        - x = x + ff_output （残差）
-        - x = LayerNorm(x) （归一化）
+    Step 6: Add & Norm (third)
+        - x = x + ff_output (residual)
+        - x = LayerNorm(x) (normalize)
         → x.shape = (1, 3, 512)
 
-    最终输出：(1, 3, 512) ← 与输入形状相同
+    Final output: (1, 3, 512) ← same shape as input
 
-    参数：
-        d_model: 模型维度（例如 512）
-        num_heads: 注意力头数（例如 8）
-        d_ff: 前馈网络隐藏维度（例如 2048，通常是 d_model 的 4 倍）
-        dropout: Dropout 比率（默认 0.1）
-        activation: 前馈网络激活函数（'relu' 或 'gelu'）
+    Args:
+        d_model: Model dimension (e.g., 512)
+        num_heads: Number of attention heads (e.g., 8)
+        d_ff: FFN hidden dimension (e.g., 2048, typically 4x d_model)
+        dropout: Dropout rate (default 0.1)
+        activation: FFN activation function ('relu' or 'gelu')
     """
 
     def __init__(
@@ -196,69 +196,69 @@ class DecoderLayer(nn.Module):
     ):
         super().__init__()
 
-        # ========== 组件 1：掩码多头自注意力 ==========
-        # 这是第一个子层，负责"看已生成的内容"
+        # ========== Component 1: Masked Multi-Head Self-Attention ==========
+        # This is the first sub-layer, responsible for "看已生成的内容"
         #
-        # 自注意力意味着：
-        # - Query, Key, Value 都来自解码器输入（自我注意）
-        # - 每个已生成的词可以看到之前生成的词
-        # - 不能看到未来的词（掩码）
+        # Self-Attention means:
+        # - Query, Key, Value all come from decoder input (self-attending)
+        # - Each generated word can see previously generated words
+        # - CANNOT see future words (masked)
         #
-        # 为什么要掩码？
-        # - 在推理时，未来的词还不存在！
-        # - 在训练时，我们掩码来模拟这个条件
-        # - 这是自回归生成（一次一个词）
+        # Why masked?
+        # - During inference, future words don't exist yet!
+        # - During training, we mask to simulate this condition
+        # - This is auto-regressive generation (one word at a time)
         self.self_attention = MultiHeadAttention(d_model, num_heads)
 
-        # ========== 组件 2：多头交叉注意力 ==========
-        # 这是第二个子层，负责"看源语言信息"
+        # ========== Component 2: Multi-Head Cross-Attention ==========
+        # This is the second sub-layer, responsible for "看源语言信息"
         #
-        # 交叉注意力意味着：
-        # - Query 来自解码器（我在寻找什么？）
-        # - Key 和 Value 来自编码器（这是源信息）
-        # - 与自注意力不同，Q, K, V 不全来自同一个源
+        # Cross-Attention means:
+        # - Query from decoder (what am I looking for?)
+        # - Key and Value from encoder (here's the source info)
+        # - Different from self-attention where Q, K, V all from same source
         #
-        # 为什么需要？
-        # - 解码器需要知道源句子说了什么！
-        # - 例如：翻译 "eating" → 需要回头看英语的 "eating"
-        # - 这是解码器"注意到"输入序列的方式
+        # Why needed?
+        # - Decoder needs to know what the source sentence says!
+        # - Example: translating "eating" → need to look back at English "eating"
+        # - This is how decoder "attends to" the input sequence
         self.cross_attention = MultiHeadAttention(d_model, num_heads)
 
-        # ========== 组件 3：位置前馈网络 ==========
-        # 这是第三个子层，负责"处理信息"
+        # ========== Component 3: Position-wise Feedforward Network ==========
+        # This is the third sub-layer, responsible for "处理信息"
         #
-        # 与编码器的前馈网络相同：
-        # - 对每个位置进行独立的非线性变换
-        # - 提取更复杂的特征
-        # - 增加模型表达能力
+        # Same as Encoder's FFN:
+        # - Independent non-linear transformation for each position
+        # - Extract more complex features
+        # - Increase model expressiveness
         self.feed_forward = PositionwiseFeedForward(
             d_model, d_ff, dropout, activation
         )
 
-        # ========== 组件 4, 5, 6：三个层归一化层 ==========
-        # 为什么是三个？
-        # - 因为我们有三个子层（掩码自注意力、交叉注意力、前馈网络）
-        # - 每个子层都需要一个 LayerNorm
+        # ========== Components 4, 5, 6: Three Layer Normalization Layers ==========
+        # Why three?
+        # - Because we have three sub-layers (Masked Self-Attn, Cross-Attn, FFN)
+        # - Each sub-layer needs a LayerNorm
         #
-        # 目的：与编码器相同
-        # - 归一化：将每个样本标准化为 mean=0, std=1
-        # - 稳定训练：防止数值爆炸或消失
-        # - 加快收敛：使梯度更稳定
-        self.norm1 = nn.LayerNorm(d_model)  # 第一个子层（掩码自注意力）
-        self.norm2 = nn.LayerNorm(d_model)  # 第二个子层（交叉注意力）
-        self.norm3 = nn.LayerNorm(d_model)  # 第三个子层（前馈网络）
+        # Purpose: same as Encoder
+        # - Normalize: standardize each sample to mean=0, std=1
+        # - Stabilize training: prevent value explosion or vanishing
+        # - Speed up convergence: make gradients more stable
+        self.norm1 = nn.LayerNorm(d_model)  # For first sub-layer (Masked Self-Attention)
+        self.norm2 = nn.LayerNorm(d_model)  # For second sub-layer (Cross-Attention)
+        self.norm3 = nn.LayerNorm(d_model)  # For third sub-layer (FFN)
 
-        # ========== 组件 7, 8, 9：三个 Dropout 层 ==========
-        # 为什么是三个？
-        # - 因为我们有三个子层
-        # - 每个子层的输出都需要 Dropout（在残差之前）
+        # ========== Components 7, 8, 9: Three Dropout Layers ==========
+        # Why three?
+        # - Because we have three sub-layers
+        # - Each sub-layer's output needs Dropout (before residual)
         #
-        # 目的：与编码器相同
-        # - 防止过拟合
-        # - 使模型不过度依赖某些路径
-        self.dropout1 = nn.Dropout(dropout)  # 掩码自注意力
-        self.dropout2 = nn.Dropout(dropout)  # 交叉注意力
-        self.dropout3 = nn.Dropout(dropout)  # 前馈网络
+        # Purpose: same as Encoder
+        # - Prevent overfitting
+        # - Make model not over-rely on certain paths
+        self.dropout1 = nn.Dropout(dropout)  # For Masked Self-Attention
+        self.dropout2 = nn.Dropout(dropout)  # For Cross-Attention
+        self.dropout3 = nn.Dropout(dropout)  # For FFN
 
     def forward(
         self,
@@ -268,343 +268,344 @@ class DecoderLayer(nn.Module):
         src_mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
-        解码器层前向传播
+        Decoder Layer forward pass
 
-        参数：
-            x: 目标序列输入，形状 (batch_size, tgt_len, d_model)
-               （通常是目标的词嵌入 + 位置编码）
+        Args:
+            x: Target sequence input of shape (batch_size, tgt_len, d_model)
+               (typically word embeddings + positional encoding of target)
 
-            encoder_output: 编码器输出，形状 (batch_size, src_len, d_model)
-                           （编码后的源序列，例如英语句子）
+            encoder_output: Encoder's output of shape (batch_size, src_len, d_model)
+                           (encoded source sequence, e.g., English sentence)
 
-            tgt_mask: 目标掩码，形状 (batch_size, 1, tgt_len, tgt_len)
-                     组合：
-                     1. 填充掩码：忽略目标中的 <PAD> 词元
-                     2. 因果掩码：防止看到未来的词元
-                     用于掩码自注意力
+            tgt_mask: Target mask of shape (batch_size, 1, tgt_len, tgt_len)
+                     Combines:
+                     1. Padding mask: ignore <PAD> tokens in target
+                     2. Causal mask: prevent looking at future tokens
+                     Used for masked self-attention
 
-            src_mask: 源填充掩码，形状 (batch_size, 1, 1, src_len)
-                     忽略源序列中的 <PAD> 词元
-                     用于交叉注意力
+            src_mask: Source padding mask of shape (batch_size, 1, 1, src_len)
+                     Ignore <PAD> tokens in source sequence
+                     Used for cross-attention
 
-        返回：
-            output: 解码器层输出，形状 (batch_size, tgt_len, d_model)
-                   （与输入维度相同）
+        Returns:
+            output: Decoder layer output of shape (batch_size, tgt_len, d_model)
+                   (same dimension as input)
 
-        完整流程：
-            1. 掩码自注意力：每个目标词元只注意之前的词元
-            2. Add & Norm：残差连接 + 层归一化
-            3. 交叉注意力：目标注意源（编码器输出）
-            4. Add & Norm：残差连接 + 层归一化
-            5. 前馈网络：独立处理每个词元，非线性变换
-            6. Add & Norm：残差连接 + 层归一化
+        Complete flow:
+            1. Masked Self-Attention: each target token attends to previous tokens only
+            2. Add & Norm: residual connection + layer normalization
+            3. Cross-Attention: target attends to source (encoder output)
+            4. Add & Norm: residual connection + layer normalization
+            5. FFN: process each token independently, non-linear transformation
+            6. Add & Norm: residual connection + layer normalization
 
-        具体例子（英语→法语翻译）：
-            源（英语）："I love apples"
-            目标（法语）："J'aime les pommes"
+        Concrete example (English→French translation):
+            Source (English): "I love apples"
+            Target (French): "J'aime les pommes"
 
-            encoder_output = 编码后的("I love apples")
+            encoder_output = encoded("I love apples")
             encoder_output.shape = (1, 3, 512)
 
-            训练时，目标输入 = "J'aime les pommes"
+            During training, target input = "J'aime les pommes"
             x.shape = (1, 4, 512)  # batch=1, tgt_len=4, d_model=512
 
-            子层 1：掩码自注意力
-                - "J'" 看：["J'"] 仅此
-                - "aime" 看：["J'", "aime"]
-                - "les" 看：["J'", "aime", "les"]
-                - "pommes" 看：["J'", "aime", "les", "pommes"]
-                → 每个词知道它之前的上下文
+            Sub-layer 1: Masked Self-Attention
+                - "J'" sees: ["J'"] only
+                - "aime" sees: ["J'", "aime"]
+                - "les" sees: ["J'", "aime", "les"]
+                - "pommes" sees: ["J'", "aime", "les", "pommes"]
+                → Each word knows context before it
                 → masked_attn_output.shape = (1, 4, 512)
 
             Add & Norm 1:
-                - x = x + masked_attn_output （残差）
-                - x = LayerNorm(x) （归一化）
+                - x = x + masked_attn_output (residual)
+                - x = LayerNorm(x) (normalize)
                 → x.shape = (1, 4, 512)
 
-            子层 2：交叉注意力
-                - Q 来自解码器：["J'", "aime", "les", "pommes"]
-                - K, V 来自编码器：["I", "love", "apples"]
-                - "pommes" 高度注意 "apples"
-                - "aime" 高度注意 "love"
-                → 获取源信息
+            Sub-layer 2: Cross-Attention
+                - Q from decoder: ["J'", "aime", "les", "pommes"]
+                - K, V from encoder: ["I", "love", "apples"]
+                - "pommes" highly attends to "apples"
+                - "aime" highly attends to "love"
+                → Gets source information
                 → cross_attn_output.shape = (1, 4, 512)
 
             Add & Norm 2:
-                - x = x + cross_attn_output （残差）
-                - x = LayerNorm(x) （归一化）
+                - x = x + cross_attn_output (residual)
+                - x = LayerNorm(x) (normalize)
                 → x.shape = (1, 4, 512)
 
-            子层 3：前馈网络
-                - 独立处理每个词
-                - 512 → 2048 → 512 （扩展→变换→压缩）
+            Sub-layer 3: FFN
+                - Process each word independently
+                - 512 → 2048 → 512 (expand→transform→compress)
                 → ff_output.shape = (1, 4, 512)
 
             Add & Norm 3:
-                - x = x + ff_output （残差）
-                - x = LayerNorm(x) （归一化）
+                - x = x + ff_output (residual)
+                - x = LayerNorm(x) (normalize)
                 → x.shape = (1, 4, 512)
 
-            最终输出：(1, 4, 512)
+            Final output: (1, 4, 512)
         """
-        # ========== 子层 1：掩码多头自注意力 ==========
+        # ========== Sub-layer 1: Masked Multi-Head Self-Attention ==========
 
-        # 步骤 1：掩码自注意力
-        # Q = K = V = x（三个输入都是解码器输入，因此是"自"注意力）
-        # 但使用 tgt_mask 来防止看到未来位置
+        # Step 1: Masked Self-Attention
+        # Q = K = V = x (all three inputs are decoder input, hence "self" attention)
+        # But with tgt_mask to prevent looking at future positions
         #
-        # 这做什么？
-        # - 每个目标词元注意自己和之前的词元
-        # - 不能注意未来的词元（生成时它们不存在！）
-        # - 从到目前为止生成的内容构建上下文
+        # What does this do?
+        # - Each target token attends to itself and previous tokens
+        # - CANNOT attend to future tokens (they don't exist during generation!)
+        # - Builds context from what's been generated so far
         #
-        # 具体例子（"J'aime les pommes"）：
-        # - "J'" (pos 0) 注意：
-        #   * "J'" (pos 0) ✓ （能看到）
-        #   * "aime" (pos 1) ✗ （未来，掩码）
-        #   * "les" (pos 2) ✗ （未来，掩码）
-        #   * "pommes" (pos 3) ✗ （未来，掩码）
+        # Concrete example ("J'aime les pommes"):
+        # - "J'" (pos 0) attends to:
+        #   * "J'" (pos 0) ✓ (can see)
+        #   * "aime" (pos 1) ✗ (future, masked)
+        #   * "les" (pos 2) ✗ (future, masked)
+        #   * "pommes" (pos 3) ✗ (future, masked)
         #
-        # - "les" (pos 2) 注意：
-        #   * "J'" (pos 0) ✓ （过去，能看到）
-        #   * "aime" (pos 1) ✓ （过去，能看到）
-        #   * "les" (pos 2) ✓ （当前，能看到）
-        #   * "pommes" (pos 3) ✗ （未来，掩码）
+        # - "les" (pos 2) attends to:
+        #   * "J'" (pos 0) ✓ (past, can see)
+        #   * "aime" (pos 1) ✓ (past, can see)
+        #   * "les" (pos 2) ✓ (current, can see)
+        #   * "pommes" (pos 3) ✗ (future, masked)
         #
-        # tgt_mask 目的：
-        # 1. 因果掩码：防止看到未来（下三角矩阵）
-        # 2. 填充掩码：如果目标有填充，忽略 <PAD> 词元
+        # tgt_mask purpose:
+        # 1. Causal mask: prevent seeing future (lower triangular matrix)
+        # 2. Padding mask: ignore <PAD> tokens if target has padding
         masked_attn_output = self.self_attention(x, x, x, tgt_mask)
         # masked_attn_output.shape = (batch_size, tgt_len, d_model)
 
-        # 步骤 2：Dropout + 残差连接
+        # Step 2: Dropout + Residual Connection
         #
         # Dropout:
-        # - 训练时：随机将一些值设为 0
-        # - 防止过拟合
+        # - Training: randomly set some values to 0
+        # - Prevents overfitting
         masked_attn_output = self.dropout1(masked_attn_output)
 
-        # 残差连接：
+        # Residual Connection:
         # x = x + MaskedAttention(x)
         #     ↑            ↑
-        #  原始输入    掩码注意力输出
+        #  original   masked attention output
+        #  input
         #
-        # 为什么要加原始输入 x？
-        # 1. 梯度流动：梯度可以直接通过 x 流动（捷径）
-        # 2. 更容易学习：模型只需学习"修改"（增量）
-        # 3. 保留信息：即使注意力学习不好，x 仍然在那里
-        x = x + masked_attn_output  # 第一个残差连接
+        # Why add original input x?
+        # 1. Gradient Flow: gradients can flow directly through x (shortcut)
+        # 2. Easier Learning: model only needs to learn "modifications" (delta)
+        # 3. Preserve Information: even if attention learns poorly, x is still there
+        x = x + masked_attn_output  # First residual connection
         # x.shape = (batch_size, tgt_len, d_model)
 
-        # 步骤 3：层归一化
+        # Step 3: Layer Normalization
         #
-        # 归一化每个样本的每个位置
-        # 公式：output = (x - mean) / std * gamma + beta
+        # Normalize each sample's each position
+        # Formula: output = (x - mean) / std * gamma + beta
         #
-        # 为什么需要？
-        # 1. 稳定数值范围：防止数值爆炸/消失
-        # 2. 加快收敛：稳定的输入分布
-        # 3. 层独立性：每层可以更独立地学习
+        # Why needed?
+        # 1. Stabilize numerical range: prevent value explosion/vanishing
+        # 2. Speed up convergence: stable input distribution
+        # 3. Layer independence: each layer can learn more independently
         x = self.norm1(x)
         # x.shape = (batch_size, tgt_len, d_model)
 
-        # ========== 子层 2：多头交叉注意力 ==========
+        # ========== Sub-layer 2: Multi-Head Cross-Attention ==========
 
-        # 步骤 4：交叉注意力
+        # Step 4: Cross-Attention
         #
-        # 这与自注意力不同！
-        # - Query (Q)：来自解码器 (x) - "我在源中寻找什么？"
-        # - Key (K)：来自编码器 (encoder_output) - "源中有什么可用？"
-        # - Value (V)：来自编码器 (encoder_output) - "实际的源内容"
+        # This is DIFFERENT from self-attention!
+        # - Query (Q): from decoder (x) - "what am I looking for?"
+        # - Key (K): from encoder (encoder_output) - "what's available in source?"
+        # - Value (V): from encoder (encoder_output) - "actual source content"
         #
-        # 这做什么？
-        # - 解码器问："源句子的哪一部分现在相关？"
-        # - 编码器提供：源句子的信息
-        # - 注意力机制找到匹配
+        # What does this do?
+        # - Decoder asks: "which part of source sentence is relevant now?"
+        # - Encoder provides: information from source sentence
+        # - Attention mechanism finds the match
         #
-        # 具体例子（英语→法语）：
-        # 源（encoder_output）："I love apples"
-        # 目标（x）："J'aime ..."
+        # Concrete example (English→French):
+        # Source (encoder_output): "I love apples"
+        # Target (x): "J'aime ..."
         #
-        # 当解码器处理 "aime"（法语 "love"）时：
-        # - Q 来自 "aime"："我是法语的 'love'，我的英语源是什么？"
-        # - K 来自编码器：["I", "love", "apples"]
-        # - 注意力权重：[0.1, 0.8, 0.1]  ← "aime" 高度注意 "love"！
-        # - V 按注意力加权 → 主要获取 "love" 的信息
+        # When decoder processes "aime" (French for "love"):
+        # - Q from "aime": "I'm the word 'love' in French, what's my English source?"
+        # - K from encoder: ["I", "love", "apples"]
+        # - Attention weights: [0.1, 0.8, 0.1]  ← "aime" highly attends to "love"!
+        # - V weighted by attention → mostly gets information from "love"
         #
-        # 这就是解码器"知道"翻译哪个源词的方式！
+        # This is how decoder "knows" what source word to translate!
         #
-        # 参数：
-        # - query=x：来自解码器（目标）
-        # - key=encoder_output：来自编码器（源）
-        # - value=encoder_output：来自编码器（源）
-        # - mask=src_mask：忽略源中的 <PAD>
+        # Arguments:
+        # - query=x: from decoder (target)
+        # - key=encoder_output: from encoder (source)
+        # - value=encoder_output: from encoder (source)
+        # - mask=src_mask: ignore <PAD> in source
         cross_attn_output = self.cross_attention(
-            query=x,                    # Q 来自解码器
-            key=encoder_output,         # K 来自编码器
-            value=encoder_output,       # V 来自编码器
-            mask=src_mask               # 忽略源填充
+            query=x,                    # Q from decoder
+            key=encoder_output,         # K from encoder
+            value=encoder_output,       # V from encoder
+            mask=src_mask               # Ignore source padding
         )
         # cross_attn_output.shape = (batch_size, tgt_len, d_model)
-        # 注意：输出长度 = query 长度 (tgt_len)，不是 key 长度！
+        # Note: output length = query length (tgt_len), not key length!
 
-        # 步骤 5：Dropout + 残差连接（第二个残差）
+        # Step 5: Dropout + Residual Connection (second residual)
         #
-        # 与之前的模式相同：
-        # 1. Dropout：防止过拟合
-        # 2. 残差：x + CrossAttention(x, encoder)
+        # Same pattern as before:
+        # 1. Dropout: prevents overfitting
+        # 2. Residual: x + CrossAttention(x, encoder)
         cross_attn_output = self.dropout2(cross_attn_output)
-        x = x + cross_attn_output  # 第二个残差连接
+        x = x + cross_attn_output  # Second residual connection
         # x.shape = (batch_size, tgt_len, d_model)
 
-        # 步骤 6：层归一化（第二次归一化）
+        # Step 6: Layer Normalization (second normalization)
         #
-        # 再次归一化，原因同上
+        # Normalize again, reason same as above
         x = self.norm2(x)
         # x.shape = (batch_size, tgt_len, d_model)
 
-        # ========== 子层 3：位置前馈网络 ==========
+        # ========== Sub-layer 3: Position-wise Feedforward ==========
 
-        # 步骤 7：前馈网络
+        # Step 7: Feedforward Network
         #
-        # 与编码器的前馈网络相同：
-        # - 对每个位置进行独立的非线性变换
-        # - 与注意力不同（注意力看其他位置），前馈网络只看当前位置
-        # - 但所有位置共享相同的前馈网络权重
+        # Same as Encoder's FFN:
+        # - Independent non-linear transformation for each position
+        # - Unlike Attention which sees other positions, FFN only sees current position
+        # - But all positions share same FFN weights
         #
-        # 架构：
+        # Architecture:
         # Linear(512 → 2048) → ReLU/GELU → Dropout → Linear(2048 → 512)
         #
-        # 为什么需要？
-        # - 注意力只"重新排列"信息（加权平均）
-        # - 前馈网络提供"非线性变换"
-        # - 允许模型学习更复杂的特征
+        # Why needed?
+        # - Attention only "rearranges" information (weighted average)
+        # - FFN provides "non-linear transformation"
+        # - Allows model to learn more complex features
         ff_output = self.feed_forward(x)
         # ff_output.shape = (batch_size, tgt_len, d_model)
 
-        # 步骤 8：Dropout + 残差连接（第三个残差）
+        # Step 8: Dropout + Residual Connection (third residual)
         #
-        # 流程与上面类似：
-        # 1. Dropout：防止过拟合
-        # 2. 残差：x + FFN(x)
+        # Flow similar to above:
+        # 1. Dropout: prevents overfitting
+        # 2. Residual: x + FFN(x)
         ff_output = self.dropout3(ff_output)
-        x = x + ff_output  # 第三个残差连接
+        x = x + ff_output  # Third residual connection
         # x.shape = (batch_size, tgt_len, d_model)
 
-        # 步骤 9：层归一化（第三次归一化）
+        # Step 9: Layer Normalization (third normalization)
         #
-        # 最终归一化
+        # Final normalization
         x = self.norm3(x)
         # x.shape = (batch_size, tgt_len, d_model)
 
-        # 最终输出：
-        # - 形状与输入相同：(batch_size, tgt_len, d_model)
-        # - 但内容已被以下方式变换：
-        #   * 掩码自注意力（来自之前词的上下文）
-        #   * 交叉注意力（来自源的信息）
-        #   * 前馈网络（非线性处理）
-        # - 可以继续到下一个 DecoderLayer，或输出最终预测
+        # Final output:
+        # - shape same as input: (batch_size, tgt_len, d_model)
+        # - But content has been transformed by:
+        #   * Masked Self-Attention (context from previous words)
+        #   * Cross-Attention (information from source)
+        #   * FFN (non-linear processing)
+        # - Can continue to next DecoderLayer, or output final prediction
         return x
 
 
 class Decoder(nn.Module):
     """
-    完整的 Transformer 解码器
+    Complete Transformer Decoder
 
-    【这是什么？】
-    这是完整的解码器！
-    由多个 DecoderLayer 堆叠而成（原始论文使用 6 层）
+    【What Is This?】
+    This is the complete Decoder!
+    Consists of multiple DecoderLayers stacked together (original paper uses 6)
 
-    【架构图】
-        输入 (batch, tgt_len, d_model)
+    【Architecture Diagram】
+        Input (batch, tgt_len, d_model)
          ↓
         ┌─────────────────┐
-        │  DecoderLayer 1 │  ← 层 1：学习基本模式
+        │  DecoderLayer 1 │  ← Layer 1: Learn basic patterns
         └─────────────────┘
          ↓
         ┌─────────────────┐
-        │  DecoderLayer 2 │  ← 层 2：学习中级模式
+        │  DecoderLayer 2 │  ← Layer 2: Learn mid-level patterns
         └─────────────────┘
          ↓
         ┌─────────────────┐
-        │  DecoderLayer 3 │  ← 层 3：学习高级模式
+        │  DecoderLayer 3 │  ← Layer 3: Learn high-level patterns
         └─────────────────┘
          ↓
-           ... (更多层)
+           ... (more layers)
          ↓
         ┌─────────────────┐
-        │  DecoderLayer N │  ← 层 N：学习最抽象的模式
+        │  DecoderLayer N │  ← Layer N: Learn most abstract patterns
         └─────────────────┘
          ↓
-        层归一化  ← 最终归一化
+        Layer Normalization  ← Final normalization
          ↓
-        输出 (batch, tgt_len, d_model)
+        Output (batch, tgt_len, d_model)
 
-    【解码器 vs 编码器：有什么区别？】
+    【Decoder vs Encoder: What's the Difference?】
 
-    编码器：
-    - 目的：理解源句子
-    - 输入：源词元（例如英语）
-    - 注意力：双向的（可以看到整个句子）
-    - 输出：源的丰富表示
-    - 用于：编码输入用于翻译、分类等
+    Encoder:
+    - Purpose: Understand source sentence
+    - Input: Source tokens (e.g., English)
+    - Attention: Bi-directional (can see entire sentence)
+    - Output: Rich representation of source
+    - Used for: Encoding input for translation, classification, etc.
 
-    解码器：
-    - 目的：生成目标句子
-    - 输入：目标词元（例如法语）
-    - 注意力：单向的（只能看到之前的词元）
-    - 输出：用于下一个词元预测的表示
-    - 用于：自回归生成（一次一个词元）
+    Decoder:
+    - Purpose: Generate target sentence
+    - Input: Target tokens (e.g., French)
+    - Attention: Uni-directional (can only see previous tokens)
+    - Output: Representation for next token prediction
+    - Used for: Auto-regressive generation (one token at a time)
 
-    【为什么堆叠多层？】
-    与编码器的推理相同：
+    【Why Stack Multiple Layers?】
+    Same reasoning as Encoder:
 
-    层 1：局部模式
-         - 简单的词关系
-         - 基本语法
+    Layer 1: Local patterns
+             - Simple word relationships
+             - Basic grammar
 
-    层 2-3：中级模式
-           - 短语结构
-           - 语义角色
+    Layers 2-3: Mid-level patterns
+                - Phrase structures
+                - Semantic roles
 
-    层 4-6：高级语义
-           - 句子级意义
-           - 源和目标之间的复杂依赖关系
+    Layers 4-6: High-level semantics
+                - Sentence-level meaning
+                - Complex dependencies between source and target
 
-    每一层都建立在前一层之上，学习越来越抽象的特征。
+    Each layer builds on the previous, learning increasingly abstract features.
 
-    【解码器如何使用编码器输出】
-    每个 DecoderLayer 通过交叉注意力接收 encoder_output：
-    - 编码器运行一次：编码整个源句子
-    - 解码器运行多次：生成时一次一个词元
-    - 每个解码器层都查看编码器输出以获取源信息
+    【How Decoder Uses Encoder Output】
+    Every DecoderLayer receives encoder_output via cross-attention:
+    - Encoder runs once: encodes entire source sentence
+    - Decoder runs multiple times: one token at a time during generation
+    - Each decoder layer looks at encoder output to get source info
 
-    可以这样理解：
-    - 编码器："这是英语句子的意思"（运行一次）
-    - 解码器："让我在生成法语时检查英语"
-              （在每个生成步骤都检查编码器输出）
+    Think of it like this:
+    - Encoder: "Here's what the English sentence means" (runs once)
+    - Decoder: "Let me check the English while generating French"
+              (checks encoder output at every generation step)
 
-    【训练 vs 推理】
+    【Training vs Inference】
 
-    训练（教师强制）：
-    - 输入：整个目标句子 "J'aime les pommes"
-    - 使用因果掩码来模拟生成
-    - 所有位置并行处理（高效！）
-    - 所有位置同时计算损失
+    Training (teacher forcing):
+    - Input: entire target sentence "J'aime les pommes"
+    - Use causal mask to simulate generation
+    - All positions processed in parallel (efficient!)
+    - Loss computed on all positions at once
 
-    推理（自回归生成）：
-    - 开始："<START>"
-    - 生成："J'" → "J' aime" → "J' aime les" → "J' aime les pommes"
-    - 一次一个词元（较慢）
-    - 使用前一个输出作为下一个输入
+    Inference (auto-regressive generation):
+    - Start with: "<START>"
+    - Generate: "J'" → "J' aime" → "J' aime les" → "J' aime les pommes"
+    - One token at a time (slower)
+    - Use previous output as next input
 
-    参数：
-        num_layers: 解码器层数（原始论文使用 6）
-        d_model: 模型维度（例如 512）
-        num_heads: 注意力头数（例如 8）
-        d_ff: 前馈网络隐藏维度（例如 2048）
-        dropout: Dropout 比率（默认 0.1）
-        activation: 前馈网络激活函数（'relu' 或 'gelu'）
+    Args:
+        num_layers: Number of decoder layers (original paper uses 6)
+        d_model: Model dimension (e.g., 512)
+        num_heads: Number of attention heads (e.g., 8)
+        d_ff: FFN hidden dimension (e.g., 2048)
+        dropout: Dropout rate (default 0.1)
+        activation: FFN activation function ('relu' or 'gelu')
     """
 
     def __init__(
@@ -618,55 +619,55 @@ class Decoder(nn.Module):
     ):
         super().__init__()
 
-        # ========== 创建多个 DecoderLayer ==========
-        # 使用 nn.ModuleList 存储多个层
+        # ========== Create Multiple DecoderLayers ==========
+        # Use nn.ModuleList to store multiple layers
         #
-        # 为什么用 nn.ModuleList？
-        # - 自动注册所有子模块（层）的参数
-        # - 让 PyTorch 知道这些层是模型的一部分
-        # - 这样优化器可以找到并更新这些参数
+        # Why nn.ModuleList?
+        # - Automatically registers all sub-modules' (layers') parameters
+        # - Lets PyTorch know these layers are part of the model
+        # - So optimizer can find and update these parameters
         #
-        # 为什么不用普通的 Python 列表？
-        # - 普通列表：PyTorch 不知道里面有参数
-        # - nn.ModuleList：PyTorch 自动注册参数
+        # Why not regular Python list?
+        # - Regular list: PyTorch doesn't know there are parameters inside
+        # - nn.ModuleList: PyTorch auto-registers parameters
         #
-        # 列表推导式：
+        # List comprehension:
         # [DecoderLayer(...) for _ in range(num_layers)]
-        # 创建 num_layers 个 DecoderLayer
-        # 每个 DecoderLayer 有相同的结构但独立的参数
+        # Creates num_layers DecoderLayers
+        # Each DecoderLayer has same structure but independent parameters
         #
-        # 示例 num_layers=6：
-        # self.layers[0] ← 层 1（参数 A）
-        # self.layers[1] ← 层 2（参数 B，与 A 不同）
-        # self.layers[2] ← 层 3（参数 C，与 A、B 不同）
+        # Example with num_layers=6:
+        # self.layers[0] ← Layer 1 (parameters A)
+        # self.layers[1] ← Layer 2 (parameters B, different from A)
+        # self.layers[2] ← Layer 3 (parameters C, different from A, B)
         # ...
-        # self.layers[5] ← 层 6（参数 F）
+        # self.layers[5] ← Layer 6 (parameters F)
         self.layers = nn.ModuleList([
             DecoderLayer(d_model, num_heads, d_ff, dropout, activation)
             for _ in range(num_layers)
         ])
 
-        # ========== 最终层归一化 ==========
-        # 为什么最后还要一个 LayerNorm？
+        # ========== Final Layer Normalization ==========
+        # Why one more LayerNorm at the end?
         #
-        # 1. 稳定最终输出：
-        #    - 经过多层操作后，数值范围可能不稳定
-        #    - 最终的 LayerNorm 确保输出分布稳定
+        # 1. Stabilize final output:
+        #    - After multiple layer operations, value range may be unstable
+        #    - Final LayerNorm ensures output distribution is stable
         #
-        # 2. 更容易进行下游处理：
-        #    - 如果连接到输出投影（例如词汇预测）
-        #    - 稳定的输入帮助线性层学习得更好
+        # 2. Easier for downstream processing:
+        #    - If connecting to output projection (e.g., vocabulary prediction)
+        #    - Stable input helps the linear layer learn better
         #
-        # 3. 实证性能更好：
-        #    - 原始论文使用这个
-        #    - Transformer 模型的标准做法
+        # 3. Empirically better performance:
+        #    - Original paper uses this
+        #    - Standard practice in Transformer models
         #
-        # 注意：
-        # - 这个 LayerNorm 的参数是独立的
-        # - 不是任何 DecoderLayer 的内部 norm1、norm2 或 norm3
+        # Note:
+        # - This LayerNorm's parameters are independent
+        # - Not any DecoderLayer's internal norm1, norm2, or norm3
         self.norm = nn.LayerNorm(d_model)
 
-        # 存储层数（供外部查询）
+        # Store layer count (for external query)
         self.num_layers = num_layers
 
     def forward(
@@ -677,198 +678,198 @@ class Decoder(nn.Module):
         src_mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
-        解码器前向传播
+        Decoder forward pass
 
-        参数：
-            x: 目标序列输入，形状 (batch_size, tgt_len, d_model)
-               （通常是目标的词嵌入 + 位置编码）
+        Args:
+            x: Target sequence input of shape (batch_size, tgt_len, d_model)
+               (typically word embeddings + positional encoding of target)
 
-            encoder_output: 编码器输出，形状 (batch_size, src_len, d_model)
-                           （编码后的源序列）
+            encoder_output: Encoder's output of shape (batch_size, src_len, d_model)
+                           (encoded source sequence)
 
-            tgt_mask: 目标掩码，形状 (batch_size, 1, tgt_len, tgt_len)
-                     组合因果掩码 + 目标填充掩码
+            tgt_mask: Target mask of shape (batch_size, 1, tgt_len, tgt_len)
+                     Combines causal mask + padding mask for target
 
-            src_mask: 源填充掩码，形状 (batch_size, 1, 1, src_len)
-                     忽略源序列中的 <PAD> 词元
+            src_mask: Source padding mask of shape (batch_size, 1, 1, src_len)
+                     Ignore <PAD> tokens in source sequence
 
-        返回：
-            output: 解码器输出，形状 (batch_size, tgt_len, d_model)
-                   （解码后的表示，准备用于最终投影）
+        Returns:
+            output: Decoder output of shape (batch_size, tgt_len, d_model)
+                   (decoded representation, ready for final projection)
 
-        完整流程：
-            输入 → 层1 → 层2 → ... → 层N → Norm → 输出
+        Complete flow:
+            Input → Layer1 → Layer2 → ... → LayerN → Norm → Output
 
-        具体例子（英语→法语翻译）：
-            源：  "I love apples"
-            目标："J'aime les pommes"
+        Concrete example (English→French translation):
+            Source: "I love apples"
+            Target: "J'aime les pommes"
 
-            假设 num_layers = 6, d_model = 512
+            Assume num_layers = 6, d_model = 512
 
             encoder_output:
                 shape = (1, 3, 512)
-                "I love apples" 的编码表示
+                Encoded representation of "I love apples"
 
-            输入 x:
+            Input x:
                 shape = (1, 4, 512)
-                x[0, 0, :] = "J'" 嵌入 + 位置编码
-                x[0, 1, :] = "aime" 嵌入 + 位置编码
-                x[0, 2, :] = "les" 嵌入 + 位置编码
-                x[0, 3, :] = "pommes" 嵌入 + 位置编码
+                x[0, 0, :] = "J'" embedding + positional encoding
+                x[0, 1, :] = "aime" embedding + positional encoding
+                x[0, 2, :] = "les" embedding + positional encoding
+                x[0, 3, :] = "pommes" embedding + positional encoding
 
-            层 1:
-                - 掩码自注意力：从之前的法语词构建上下文
-                - 交叉注意力：查看英语源
-                - 前馈网络：提取基本特征
+            Layer 1:
+                - Masked Self-Attention: build context from previous French words
+                - Cross-Attention: look at English source
+                - FFN: extract basic features
                 → x.shape = (1, 4, 512)
 
-            层 2:
-                - 法语和英语之间更复杂的关系
-                - 建立在层 1 的特征之上
+            Layer 2:
+                - More complex relationships between French and English
+                - Build on Layer 1's features
                 → x.shape = (1, 4, 512)
 
-            层 3-6:
-                - 逐步提取更抽象的特征
-                - 最后一层包含最丰富的上下文信息
+            Layers 3-6:
+                - Progressively extract more abstract features
+                - Final layer contains richest contextual information
                 → x.shape = (1, 4, 512)
 
-            最终层归一化:
-                - 归一化最终输出
+            Final LayerNorm:
+                - Normalize final output
                 → x.shape = (1, 4, 512)
 
-            输出:
-                x[0, 0, :] = "J'" 编码（知道：这是开始，接下来是动词）
-                x[0, 1, :] = "aime" 编码（知道：主语是 "I"，宾语即将到来）
-                x[0, 2, :] = "les" 编码（知道：冠词，名词即将到来）
-                x[0, 3, :] = "pommes" 编码（知道：这是宾语，结束句子）
+            Output:
+                x[0, 0, :] = "J'" encoding (knows: this is start, next is verb)
+                x[0, 1, :] = "aime" encoding (knows: subject is "I", object upcoming)
+                x[0, 2, :] = "les" encoding (knows: article, noun coming)
+                x[0, 3, :] = "pommes" encoding (knows: this is object, end sentence)
 
-                每个词的表示包含：
-                ✓ 来自之前法语词的上下文（掩码自注意力）
-                ✓ 来自英语源的信息（交叉注意力）
-                ✓ 来自多层的丰富特征（深度）
+                Each word's representation contains:
+                ✓ Context from previous French words (masked self-attention)
+                ✓ Information from English source (cross-attention)
+                ✓ Rich features from multiple layers (depth)
 
-        【为什么每层输出形状相同？】
-        - 每层的输入和输出维度都是 d_model
-        - 这允许：
-          1. 使用残差连接（x + SubLayer(x)）
-          2. 堆叠任意数量的层
-          3. 灵活组合
-          4. 所有层可以使用相同的 encoder_output
+        【Why Does Each Layer Output Same Shape?】
+        - Each layer's input and output dimensions are both d_model
+        - This allows:
+          1. Using residual connections (x + SubLayer(x))
+          2. Stacking arbitrary number of layers
+          3. Flexible composition
+          4. Same encoder_output can be used by all layers
 
-        【跨层的信息流】
-        - 层 1 输出 → 成为层 2 输入
-        - 层 2 输出 → 成为层 3 输入
+        【Information Flow Across Layers】
+        - Layer 1 output → becomes Layer 2 input
+        - Layer 2 output → becomes Layer 3 input
         - ...
-        - 最后一层包含所有之前层的信息
-        - 每一层都添加对源-目标关系的更丰富理解
+        - Final layer contains information from all previous layers
+        - Each layer adds richer understanding of source-target relationship
         """
-        # ========== 顺序通过每个解码器层 ==========
-        # for 循环按顺序执行：
+        # ========== Pass Through Each Decoder Layer Sequentially ==========
+        # for loop executes in order:
         # x = layer_1(x, encoder_output, tgt_mask, src_mask)
         # x = layer_2(x, encoder_output, tgt_mask, src_mask)
         # x = layer_3(x, encoder_output, tgt_mask, src_mask)
         # ...
         # x = layer_N(x, encoder_output, tgt_mask, src_mask)
         #
-        # 重要说明：
-        # - 每层的输入是前一层的输出（x 被更新）
-        # - encoder_output 保持不变（所有层相同）
-        # - tgt_mask 保持不变（所有层相同的因果掩码）
-        # - src_mask 保持不变（所有层相同的填充掩码）
+        # Important notes:
+        # - Each layer's input is previous layer's output (x updated)
+        # - encoder_output stays constant (same for all layers)
+        # - tgt_mask stays constant (same causal mask for all layers)
+        # - src_mask stays constant (same padding mask for all layers)
         #
-        # 为什么 encoder_output 不变？
-        # - 编码器运行一次，产生源的固定表示
-        # - 每个解码器层都使用这个相同的源表示
-        # - 就像参考书：解码器不断查阅它，但书本身不变
+        # Why encoder_output doesn't change?
+        # - Encoder runs once, produces fixed representation of source
+        # - Every decoder layer uses this same source representation
+        # - Like a reference book: decoder keeps consulting it, but book doesn't change
         for layer in self.layers:
             x = layer(x, encoder_output, tgt_mask, src_mask)
-            # x.shape 始终为 (batch_size, tgt_len, d_model)
+            # x.shape always (batch_size, tgt_len, d_model)
 
-        # ========== 最终层归一化 ==========
-        # 归一化最终输出
-        # 确保输出分布稳定
+        # ========== Final Layer Normalization ==========
+        # Normalize final output
+        # Ensures output distribution is stable
         x = self.norm(x)
 
-        # 最终输出：
-        # - 形状：(batch_size, tgt_len, d_model)
-        # - 与输入形状相同，但内容已被转换
-        # - 每个目标词元的表示包含：
-        #   * 来自之前目标词元的上下文（通过掩码自注意力）
-        #   * 来自源序列的信息（通过交叉注意力）
-        #   * 来自多层的丰富特征（通过深度）
-        # - 这个输出可以：
-        #   * 连接到输出投影（线性层到词汇表）
-        #   * 用于下一个词元预测
-        #   * 用于其他下游任务
+        # Final output:
+        # - shape: (batch_size, tgt_len, d_model)
+        # - Same shape as input, but content has been transformed
+        # - Each target token's representation contains:
+        #   * Context from previous target tokens (via masked self-attention)
+        #   * Information from source sequence (via cross-attention)
+        #   * Rich features from multiple layers (via depth)
+        # - This output can be:
+        #   * Connected to output projection (linear layer to vocabulary)
+        #   * Used for next token prediction
+        #   * Used for other downstream tasks
         return x
 
 
 def create_causal_mask(size: int) -> torch.Tensor:
     """
-    为解码器自注意力创建因果掩码（也称为前瞻掩码）
+    Create causal mask (also called look-ahead mask) for decoder self-attention
 
-    【这是什么？】
-    一个下三角矩阵，防止位置注意到未来位置。
-    用于解码器的掩码自注意力。
+    【What Is This?】
+    A lower triangular matrix that prevents positions from attending to future positions.
+    Used in decoder's masked self-attention.
 
-    【为什么需要？】
-    在自回归生成过程中，我们一次生成一个词元：
-    - 生成词元 3 时，我们只看到了词元 0, 1, 2
-    - 我们不能看到词元 4, 5, 6...（它们还不存在！）
-    - 在训练时，我们通过掩码未来位置来模拟这个
+    【Why Needed?】
+    During auto-regressive generation, we generate one token at a time:
+    - When generating token 3, we've only seen tokens 0, 1, 2
+    - We CANNOT see tokens 4, 5, 6... (they don't exist yet!)
+    - During training, we simulate this by masking future positions
 
-    【掩码格式】
-    返回一个矩阵，其中：
-    - 1 = 可以注意（位置可见）
-    - 0 = 不能注意（位置被掩码）
+    【Mask Format】
+    Returns a matrix where:
+    - 1 = can attend (position is visible)
+    - 0 = cannot attend (position is masked)
 
-    【示例】
-    对于 size=4（有 4 个词元的句子）：
+    【Example】
+    For size=4 (sentence with 4 tokens):
 
-    [[1, 0, 0, 0],   ← 位置 0 只能看到位置 0
-     [1, 1, 0, 0],   ← 位置 1 能看到位置 0-1
-     [1, 1, 1, 0],   ← 位置 2 能看到位置 0-2
-     [1, 1, 1, 1]]   ← 位置 3 能看到位置 0-3
+    [[1, 0, 0, 0],   ← Position 0 can only see position 0
+     [1, 1, 0, 0],   ← Position 1 can see positions 0-1
+     [1, 1, 1, 0],   ← Position 2 can see positions 0-2
+     [1, 1, 1, 1]]   ← Position 3 can see positions 0-3
 
-    可视化表示：
+    Visual representation:
     ```
-           位置 0  1  2  3
-    位置 0:  ✓  ✗  ✗  ✗
-    位置 1:  ✓  ✓  ✗  ✗
-    位置 2:  ✓  ✓  ✓  ✗
-    位置 3:  ✓  ✓  ✓  ✓
+           pos 0  1  2  3
+    pos 0:  ✓  ✗  ✗  ✗
+    pos 1:  ✓  ✓  ✗  ✗
+    pos 2:  ✓  ✓  ✓  ✗
+    pos 3:  ✓  ✓  ✓  ✓
     ```
 
-    这被称为"因果"，因为：
-    - 信息按因果顺序流动（过去 → 现在）
-    - 不能倒流（未来 → 现在）
-    - 尊重时间顺序
+    This is called "causal" because:
+    - Information flows causally (past → present)
+    - Cannot flow backwards (future → present)
+    - Respects temporal order
 
-    参数：
-        size: 序列长度（词元数）
+    Args:
+        size: Sequence length (number of tokens)
 
-    返回：
-        mask: 因果掩码，形状 (1, 1, size, size)
-              形状解释：
-              - 第一个 1：批次维度（跨批次广播）
-              - 第二个 1：头维度（跨注意力头广播）
-              - (size, size)：实际掩码矩阵（query_len × key_len）
+    Returns:
+        mask: Causal mask of shape (1, 1, size, size)
+              Shape explanation:
+              - First 1: batch dimension (broadcasts across batches)
+              - Second 1: head dimension (broadcasts across attention heads)
+              - (size, size): actual mask matrix (query_len × key_len)
 
-    在解码器中的用法：
+    Usage in decoder:
         tgt_len = 5
         causal_mask = create_causal_mask(tgt_len)
         # causal_mask.shape = (1, 1, 5, 5)
 
-        # 在注意力中使用：
+        # Use in attention:
         attention(query, key, value, mask=causal_mask)
-        # 每个位置只能注意自己和之前的位置
+        # Each position can only attend to itself and previous positions
     """
-    # ========== 创建下三角矩阵 ==========
-    # torch.tril 创建下三角矩阵
-    # torch.ones(size, size) 创建全 1 矩阵
-    # tril 将上三角设为 0，保持下三角为 1
+    # ========== Create Lower Triangular Matrix ==========
+    # torch.tril creates a lower triangular matrix
+    # torch.ones(size, size) creates all-ones matrix
+    # tril sets upper triangle to 0, keeps lower triangle as 1
     #
-    # 示例 size=4：
+    # Example for size=4:
     # torch.ones(4, 4):
     # [[1, 1, 1, 1],
     #  [1, 1, 1, 1],
@@ -881,23 +882,23 @@ def create_causal_mask(size: int) -> torch.Tensor:
     #  [1, 1, 1, 0],
     #  [1, 1, 1, 1]]
     #
-    # 这正是我们想要的因果掩码！
+    # This is exactly the causal mask we want!
     mask = torch.tril(torch.ones(size, size))
     # mask.shape = (size, size)
 
-    # ========== 添加批次和头维度 ==========
-    # 从 (size, size) 重塑为 (1, 1, size, size)
-    # 为什么？
-    # - 注意力期望掩码形状：(batch, heads, query_len, key_len)
-    # - (1, 1, size, size) 会广播到 (batch, heads, size, size)
+    # ========== Add Batch and Head Dimensions ==========
+    # Reshape from (size, size) to (1, 1, size, size)
+    # Why?
+    # - Attention expects mask shape: (batch, heads, query_len, key_len)
+    # - (1, 1, size, size) broadcasts to (batch, heads, size, size)
     #
-    # 广播示例：
+    # Broadcasting example:
     # mask.shape = (1, 1, 4, 4)
     # attention scores.shape = (32, 8, 4, 4)  # batch=32, heads=8
-    # → mask 自动广播到 (32, 8, 4, 4)
+    # → mask broadcasts to (32, 8, 4, 4) automatically
     #
-    # .unsqueeze(0) 在位置 0 添加维度：(size, size) → (1, size, size)
-    # .unsqueeze(0) 再次在位置 0 添加维度：(1, size, size) → (1, 1, size, size)
+    # .unsqueeze(0) adds dimension at position 0: (size, size) → (1, size, size)
+    # .unsqueeze(0) again adds dimension at position 0: (1, size, size) → (1, 1, size, size)
     mask = mask.unsqueeze(0).unsqueeze(0)
     # mask.shape = (1, 1, size, size)
 
@@ -905,44 +906,44 @@ def create_causal_mask(size: int) -> torch.Tensor:
 
 
 if __name__ == "__main__":
-    # 测试代码
-    print("=== 测试因果掩码 ===\n")
+    # Test code
+    print("=== Testing Causal Mask ===\n")
 
-    # 创建一个小的因果掩码进行可视化
+    # Create a small causal mask to visualize
     causal_mask = create_causal_mask(5)
-    print(f"因果掩码形状：{causal_mask.shape}")
-    print("因果掩码 (5x5)：")
+    print(f"Causal mask shape: {causal_mask.shape}")
+    print("Causal mask (5x5):")
     print(causal_mask.squeeze().numpy())
-    print("\n(1 = 能看到, 0 = 看不到)")
+    print("\n(1 = can see, 0 = cannot see)")
 
-    print("\n=== 测试解码器层 ===\n")
+    print("\n=== Testing Decoder Layer ===\n")
 
     batch_size = 2
-    src_len = 6  # 源序列长度（例如英语）
-    tgt_len = 5  # 目标序列长度（例如法语）
+    src_len = 6  # Source sequence length (e.g., English)
+    tgt_len = 5  # Target sequence length (e.g., French)
     d_model = 512
     num_heads = 8
     d_ff = 2048
 
-    # 创建解码器层
+    # Create decoder layer
     decoder_layer = DecoderLayer(d_model, num_heads, d_ff)
 
-    # 创建虚拟输入
-    x = torch.randn(batch_size, tgt_len, d_model)  # 目标输入
-    encoder_output = torch.randn(batch_size, src_len, d_model)  # 编码器输出
+    # Create dummy inputs
+    x = torch.randn(batch_size, tgt_len, d_model)  # Target input
+    encoder_output = torch.randn(batch_size, src_len, d_model)  # Encoder output
 
-    print(f"目标输入形状：{x.shape}")
-    print(f"编码器输出形状：{encoder_output.shape}")
+    print(f"Target input shape: {x.shape}")
+    print(f"Encoder output shape: {encoder_output.shape}")
 
-    # 创建掩码
-    tgt_mask = create_causal_mask(tgt_len)  # 目标的因果掩码
-    src_mask = torch.ones(batch_size, 1, 1, src_len)  # 源没有填充（全为 1）
+    # Create masks
+    tgt_mask = create_causal_mask(tgt_len)  # Causal mask for target
+    src_mask = torch.ones(batch_size, 1, 1, src_len)  # No padding in source (all 1s)
 
-    # 前向传播
+    # Forward pass
     output = decoder_layer(x, encoder_output, tgt_mask, src_mask)
-    print(f"解码器层输出形状：{output.shape}")
+    print(f"Decoder layer output shape: {output.shape}")
 
-    print("\n=== 测试完整解码器（6 层）===\n")
+    print("\n=== Testing Full Decoder (6 layers) ===\n")
 
     num_layers = 6
     decoder = Decoder(
@@ -953,9 +954,9 @@ if __name__ == "__main__":
     )
 
     output_full = decoder(x, encoder_output, tgt_mask, src_mask)
-    print(f"完整解码器输出形状：{output_full.shape}")
+    print(f"Full decoder output shape: {output_full.shape}")
 
-    # 计算参数数量
+    # Calculate parameter count
     total_params = sum(p.numel() for p in decoder.parameters())
-    print(f"\n完整解码器（{num_layers} 层）总参数：{total_params:,}")
-    print(f"大约 {total_params / 1e6:.1f}M 参数")
+    print(f"\nFull decoder ({num_layers} layers) total parameters: {total_params:,}")
+    print(f"Approximately {total_params / 1e6:.1f}M parameters")

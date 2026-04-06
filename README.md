@@ -40,6 +40,7 @@
 | 沒有訓練範例 | **完整訓練流程** ✅ |
 | 需要 GPU | CPU 友善（小模型）|
 | 只有程式碼 | 程式碼 + 直覺比喻 + 視覺化圖表 |
+| 照抄論文超參數 | **針對小模型調整** （實際可用！）|
 
 **理念：** 如果你無法用簡潔且經過測試、並有完整文件的程式碼來解釋它，代表你還不夠理解它。
 
@@ -127,20 +128,20 @@ pytest tests/ -v  # 80 個測試應該通過
 
 ### 訓練模型
 ```bash
-# ⚠️ 關鍵：必須同時使用 --lr-factor 10.0 和 --label-smoothing 0.0
-# 詳見 TRAINING.md 的說明
+# ✅ 使用固定學習率（不使用 Transformer 排程！）
 
-# 訓練複製任務（最簡單，CPU 上約 15 分鐘）
-python train.py --task copy --epochs 30 --lr-factor 10.0 --label-smoothing 0.0
+# 訓練複製任務（最簡單，CPU 上約 10 分鐘，準確率 95-99%）
+python train.py --task copy --epochs 20 --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
 
-# 訓練反轉任務（中等難度）
-python train.py --task reverse --epochs 40 --lr-factor 10.0 --label-smoothing 0.0
+# 訓練反轉任務（中等難度，約 20 分鐘，準確率 85-95%）
+python train.py --task reverse --epochs 30 --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
 
-# 訓練排序任務（最困難）
-python train.py --task sort --epochs 60 --lr-factor 10.0 --label-smoothing 0.0
+# 訓練排序任務（最困難，約 30 分鐘，準確率 70-85%）
+python train.py --task sort --epochs 50 --fixed-lr 0.0005 --label-smoothing 0.0 --dropout 0.0
 ```
 
-**📖 完整訓練指南請參見 [TRAINING.md](TRAINING.md)**
+**📖 完整訓練指南請參見 [TRAINING.md](TRAINING.md)**  
+**🐛 模型訓練遇到問題？參見 [TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ### 使用模型
 ```python

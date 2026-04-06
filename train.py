@@ -90,8 +90,9 @@ def train_epoch(
         # Update weights
         optimizer.step()
 
-        # Update learning rate
-        scheduler.step()
+        # Update learning rate (if using schedule)
+        if scheduler is not None:
+            scheduler.step()
 
         # Update metrics
         with torch.no_grad():
@@ -100,7 +101,10 @@ def train_epoch(
         # Print progress every 50 batches
         if (batch_idx + 1) % 50 == 0:
             current_metrics = metrics.get_metrics()
-            lr = scheduler.get_last_lr()
+            if scheduler is not None:
+                lr = scheduler.get_last_lr()
+            else:
+                lr = optimizer.param_groups[0]['lr']
             print(f"  Batch {batch_idx + 1}/{len(train_loader)} | "
                   f"Loss: {current_metrics['loss']:.4f} | "
                   f"Token Acc: {current_metrics['token_accuracy']:.2f}% | "
@@ -248,10 +252,12 @@ def main():
                         help='Number of training epochs')
     parser.add_argument('--batch-size', type=int, default=64,
                         help='Batch size')
+    parser.add_argument('--fixed-lr', type=float, default=None,
+                        help='Use fixed learning rate instead of Transformer schedule (e.g., 0.001)')
     parser.add_argument('--lr-factor', type=float, default=2.0,
-                        help='Learning rate factor')
+                        help='Learning rate factor (only for Transformer schedule)')
     parser.add_argument('--warmup-steps', type=int, default=1000,
-                        help='Number of warmup steps')
+                        help='Number of warmup steps (only for Transformer schedule)')
     parser.add_argument('--label-smoothing', type=float, default=0.1,
                         help='Label smoothing factor')
     parser.add_argument('--clip-grad', type=float, default=1.0,
@@ -284,7 +290,7 @@ def main():
 
     # Create dataloaders
     print("[*] Loading data...")
-    train_loader, val_loader, dataset_info = create_dataloader(
+    train_loader, val_loader, test_loader, dataset_info = create_dataloader(
         dataset_type=args.task,
         batch_size=args.batch_size,
         num_samples=args.num_samples,
@@ -295,6 +301,7 @@ def main():
     print(f"   Task: {dataset_info['task']}")
     print(f"   Train samples: {dataset_info['train_samples']}")
     print(f"   Val samples: {dataset_info['val_samples']}")
+    print(f"   Test samples: {dataset_info['test_samples']}")
     print(f"   Vocab size: {dataset_info['vocab_size']}")
     print()
 
@@ -319,13 +326,21 @@ def main():
     print()
 
     # Create optimizer and scheduler
-    optimizer = torch.optim.Adam(model.parameters(), lr=1.0, betas=(0.9, 0.98), eps=1e-9)
-    scheduler = TransformerLRScheduler(
-        optimizer,
-        d_model=args.d_model,
-        warmup_steps=args.warmup_steps,
-        factor=args.lr_factor
-    )
+    if args.fixed_lr is not None:
+        # Use fixed learning rate (better for small models/simple tasks)
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.fixed_lr, betas=(0.9, 0.999), eps=1e-9)
+        scheduler = None  # No scheduler needed for fixed LR
+        print(f"[*] Using FIXED learning rate: {args.fixed_lr}")
+    else:
+        # Use Transformer LR schedule (original paper)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1.0, betas=(0.9, 0.98), eps=1e-9)
+        scheduler = TransformerLRScheduler(
+            optimizer,
+            d_model=args.d_model,
+            warmup_steps=args.warmup_steps,
+            factor=args.lr_factor
+        )
+        print(f"[*] Using Transformer LR schedule: factor={args.lr_factor}, warmup={args.warmup_steps}")
 
     # Create loss function
     criterion = LabelSmoothingLoss(
@@ -439,11 +454,28 @@ def main():
 
         print()
 
-    # Final generation test
+    # Final test set evaluation (held-out data, never seen during training)
     print("\n" + "="*60)
     print(">> TRAINING COMPLETE!")
     print("="*60)
     print(f"Best validation sequence accuracy: {best_val_acc:.2f}%\n")
+
+    # Evaluate on test set (most important metric - true generalization)
+    print("="*60)
+    print(">> FINAL TEST SET EVALUATION")
+    print("="*60)
+    print("Evaluating on held-out test set (never seen during training)...\n")
+
+    test_metrics = evaluate(
+        model, test_loader, criterion, device, dataset_info['pad_token']
+    )
+
+    print(f"[+] Test Set Results:")
+    print(f"   Loss:      {test_metrics['loss']:.4f}")
+    print(f"   Token Acc: {test_metrics['token_accuracy']:.2f}%")
+    print(f"   Seq Acc:   {test_metrics['sequence_accuracy']:.2f}%")
+    print(f"   Perplexity: {test_metrics['perplexity']:.2f}")
+    print("="*60 + "\n")
 
     test_generation(
         model, test_samples, device,
