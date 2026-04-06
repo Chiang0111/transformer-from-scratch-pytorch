@@ -377,7 +377,6 @@ MIT License - 歡迎用於學習和作品集！
 
 - 原始論文：Vaswani 等人的 ["Attention Is All You Need"](https://arxiv.org/abs/1706.03762)
 - 靈感來源：Jay Alammar 的 [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/)
-- 為 ML 學習社群用 ❤️ 建立
 
 ---
 
