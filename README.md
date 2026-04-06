@@ -391,22 +391,4 @@ See [`LICENSE`](LICENSE) for details.
 
 ---
 
-## ⭐ Show Your Support
-
-If you found this helpful, please give it a star! It helps others discover this resource.
-
-**Share with:**
-- ML students learning transformers
-- Engineers preparing for AI roles
-- Anyone building transformers from scratch
-
----
-
-## 📬 Contact
-
-- **Issues:** [GitHub Issues](https://github.com/Chiang0111/transformer-from-scratch-pytorch/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/Chiang0111/transformer-from-scratch-pytorch/discussions)
-
----
-
 **Built to make transformers accessible to everyone through comprehensive documentation and clean code.**
