@@ -374,7 +374,6 @@ See [`LICENSE`](LICENSE) for details.
 
 - Original paper: ["Attention Is All You Need"](https://arxiv.org/abs/1706.03762) by Vaswani et al.
 - Inspired by [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) by Jay Alammar
-- Built with ❤️ for the ML learning community
 
 ---
 
