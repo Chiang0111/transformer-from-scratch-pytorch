@@ -1,180 +1,180 @@
-# Training Guide
+# 訓練指南
 
-Complete guide to training your Transformer model on sequence tasks.
+在序列任務上訓練 Transformer 模型的完整指南。
 
 ---
 
-## 🚀 Quick Start (Copy-Paste Ready)
+## 🚀 快速開始（複製貼上即可用）
 
-### Train on Copy Task (Easiest - 10 minutes)
+### 訓練複製任務（最簡單 - 10 分鐘）
 ```bash
 python train.py --task copy --epochs 20 --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
 ```
-**Expected:** 95-99% accuracy
+**預期結果：** 95-99% 準確率
 
-### Train on Reverse Task (Medium - 20 minutes)
+### 訓練反轉任務（中等 - 20 分鐘）
 ```bash
 python train.py --task reverse --epochs 30 --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
 ```
-**Expected:** 85-95% accuracy
+**預期結果：** 85-95% 準確率
 
-### Train on Sort Task (Hard - 30 minutes)
+### 訓練排序任務（困難 - 30 分鐘）
 ```bash
 python train.py --task sort --epochs 50 --fixed-lr 0.0005 --label-smoothing 0.0 --dropout 0.0
 ```
-**Expected:** 70-85% accuracy
+**預期結果：** 70-85% 準確率
 
 ---
 
-## ⚠️ IMPORTANT: Why These Parameters?
+## ⚠️ 重要：為什麼使用這些參數？
 
-### `--fixed-lr 0.001` - Use Fixed Learning Rate
+### `--fixed-lr 0.001` - 使用固定學習率
 
-**DO NOT use the Transformer LR schedule for small models!**
+**不要在小型模型上使用 Transformer 學習率排程！**
 
-The original paper's schedule (`--lr-factor`, `--warmup-steps`) was designed for:
-- Large models (d_model=512, 6 layers, ~100M parameters)
-- Complex tasks (translation with millions of samples)
+原始論文的排程（`--lr-factor`、`--warmup-steps`）是為以下情境設計的：
+- 大型模型（d_model=512、6 層、約 100M 參數）
+- 複雜任務（具有數百萬樣本的翻譯任務）
 
-For small models (d_model=128, 2 layers, ~1M parameters), the schedule produces learning rates **5-40x too high**, causing training to completely fail.
+對於小型模型（d_model=128、2 層、約 1M 參數），該排程會產生**過高 5-40 倍**的學習率，導致訓練完全失敗。
 
-✅ **Use:** `--fixed-lr 0.001` (simple and works)  
-❌ **Don't use:** `--lr-factor 10.0 --warmup-steps 500` (will fail)
+✅ **使用：** `--fixed-lr 0.001`（簡單且有效）  
+❌ **不要使用：** `--lr-factor 10.0 --warmup-steps 500`（會失敗）
 
-### `--label-smoothing 0.0` - Disable Label Smoothing
+### `--label-smoothing 0.0` - 停用標籤平滑
 
-Label smoothing distributes probability to wrong answers, which:
-- ✅ Helps translation (multiple valid outputs)
-- ❌ Hurts algorithmic tasks (one correct answer)
+標籤平滑會將機率分散到錯誤答案上，這會：
+- ✅ 有助於翻譯（多個有效輸出）
+- ❌ 有害於演算法任務（唯一正確答案）
 
-For copy/reverse/sort: always use `0.0`
+對於複製/反轉/排序：永遠使用 `0.0`
 
-### `--dropout 0.0` - Disable Dropout for Small Datasets
+### `--dropout 0.0` - 對小型資料集停用 Dropout
 
-With only 10K training samples, dropout can interfere with learning.
-- Small datasets (< 10K): `--dropout 0.0`
-- Large datasets (> 50K): `--dropout 0.1`
+只有 10K 訓練樣本時，dropout 可能會干擾學習。
+- 小型資料集（< 10K）：`--dropout 0.0`
+- 大型資料集（> 50K）：`--dropout 0.1`
 
-**→ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) if your model isn't learning**
+**→ 如果模型沒有學習，請參閱 [TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ---
 
-## 📊 Data Splits (Proper ML Practice)
+## 📊 資料分割（正確的機器學習實務）
 
-The training script automatically splits data into three sets:
+訓練腳本會自動將資料分割為三個集合：
 
-- **Training (80%):** Used to train the model
-- **Validation (10%):** Used for early stopping and selecting best checkpoint
-- **Test (10%):** **Never seen during training** - final evaluation only
+- **訓練集（80%）：** 用於訓練模型
+- **驗證集（10%）：** 用於早停和選擇最佳檢查點
+- **測試集（10%）：** **訓練期間從未見過** - 僅用於最終評估
 
-**Why this matters:** Using the validation set to select the best checkpoint means the model "indirectly sees" that data. The test set provides an unbiased estimate of true performance on unseen data. This is basic ML hygiene that prevents data leakage.
+**為什麼重要：** 使用驗證集選擇最佳檢查點意味著模型「間接看到」該資料。測試集提供對未見資料真實效能的無偏估計。這是防止資料洩漏的基本機器學習衛生習慣。
 
-**What you'll see in output:**
+**輸出中您會看到：**
 ```
 Dataset ready:
    Task: copy
    Train samples: 8000
    Val samples: 1000
-   Test samples: 1000   ← Held-out for final evaluation
+   Test samples: 1000   ← 保留用於最終評估
 ```
 
-After training completes:
+訓練完成後：
 ```
 >> FINAL TEST SET EVALUATION
 Test Set Results:
-   Seq Acc:   98.60%   ← This is the real performance metric
+   Seq Acc:   98.60%   ← 這是真實的效能指標
 ```
 
-The test accuracy is what you should report - it represents true generalization performance.
+測試準確率是您應該報告的數據 - 它代表真正的泛化效能。
 
 ---
 
-## 📋 Available Tasks
+## 📋 可用任務
 
-### 1. Copy Task ⭐☆☆☆☆ (Easiest)
+### 1. 複製任務 ⭐☆☆☆☆（最簡單）
 
-Learn to copy input sequences exactly.
+學習完全複製輸入序列。
 
 ```
-Input:  [5, 7, 3, 9]
-Output: [5, 7, 3, 9]
+輸入：  [5, 7, 3, 9]
+輸出：  [5, 7, 3, 9]
 ```
 
-**Command:**
+**指令：**
 ```bash
 python train.py --task copy --epochs 20 --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
 ```
 
-**Expected Results:**
-- Epoch 1: ~66% token accuracy, ~28% sequence accuracy
-- Epoch 3: ~98% token accuracy, ~89% sequence accuracy
-- Epoch 5-7: 99%+ token accuracy, 95-98% sequence accuracy
-- Final: 98-99% sequence accuracy
+**預期結果：**
+- Epoch 1：約 66% 詞元準確率，約 28% 序列準確率
+- Epoch 3：約 98% 詞元準確率，約 89% 序列準確率
+- Epoch 5-7：99%+ 詞元準確率，95-98% 序列準確率
+- 最終：98-99% 序列準確率
 
-**Use this task to:**
-- Verify your setup works
-- Test hyperparameter changes
-- Debug issues
+**使用此任務來：**
+- 驗證您的設定有效
+- 測試超參數變更
+- 除錯問題
 
 ---
 
-### 2. Reverse Task ⭐⭐☆☆☆ (Medium)
+### 2. 反轉任務 ⭐⭐☆☆☆（中等）
 
-Learn to reverse input sequences.
+學習反轉輸入序列。
 
 ```
-Input:  [5, 7, 3, 9]
-Output: [9, 3, 7, 5]
+輸入：  [5, 7, 3, 9]
+輸出：  [9, 3, 7, 5]
 ```
 
-**Command:**
+**指令：**
 ```bash
 python train.py --task reverse --epochs 30 --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
 ```
 
-**Expected Results:**
-- Epoch 5: ~40% token accuracy
-- Epoch 15: ~75% token accuracy
-- Epoch 30: ~90% token accuracy, ~75-85% sequence accuracy
+**預期結果：**
+- Epoch 5：約 40% 詞元準確率
+- Epoch 15：約 75% 詞元準確率
+- Epoch 30：約 90% 詞元準確率，約 75-85% 序列準確率
 
-**Use this task to:**
-- Test positional understanding
-- Verify attention mechanisms work
-- Challenge the model beyond trivial tasks
+**使用此任務來：**
+- 測試位置理解
+- 驗證注意力機制運作
+- 挑戰模型超越簡單任務
 
 ---
 
-### 3. Sort Task ⭐⭐⭐☆☆ (Hard)
+### 3. 排序任務 ⭐⭐⭐☆☆（困難）
 
-Learn to sort numbers in ascending order.
+學習將數字升序排序。
 
 ```
-Input:  [7, 3, 9, 5]
-Output: [3, 5, 7, 9]
+輸入：  [7, 3, 9, 5]
+輸出：  [3, 5, 7, 9]
 ```
 
-**Command:**
+**指令：**
 ```bash
 python train.py --task sort --epochs 50 --fixed-lr 0.0005 --label-smoothing 0.0 --dropout 0.0
 ```
 
-**Expected Results:**
-- Epoch 10: ~25% token accuracy
-- Epoch 30: ~55% token accuracy
-- Epoch 50: ~75% token accuracy, ~60-70% sequence accuracy
+**預期結果：**
+- Epoch 10：約 25% 詞元準確率
+- Epoch 30：約 55% 詞元準確率
+- Epoch 50：約 75% 詞元準確率，約 60-70% 序列準確率
 
-**Use this task to:**
-- Test algorithmic reasoning
-- Demonstrate Transformer capabilities
-- Benchmark model performance
+**使用此任務來：**
+- 測試演算法推理
+- 展示 Transformer 能力
+- 評估模型效能基準
 
-**Note:** Sort is significantly harder. Use lower LR (`0.0005` instead of `0.001`) for better stability.
+**注意：** 排序顯著更困難。使用較低的學習率（`0.0005` 而非 `0.001`）以獲得更好的穩定性。
 
 ---
 
-## 📊 Understanding Training Output
+## 📊 理解訓練輸出
 
-### During Training
+### 訓練期間
 
 ```
 Epoch 5/20
@@ -188,27 +188,27 @@ Epoch 5/20
    Time: 56.2s
 ```
 
-**Metrics Explained:**
+**指標說明：**
 
-- **Loss**: Cross-entropy loss (lower is better)
-  - Random guessing: ~2.996 (for vocab_size=20)
-  - Good model: < 0.5
-  - Excellent model: < 0.1
+- **Loss**：交叉熵損失（越低越好）
+  - 隨機猜測：約 2.996（vocab_size=20 時）
+  - 良好模型：< 0.5
+  - 優秀模型：< 0.1
 
-- **Token Acc**: Percentage of individual tokens predicted correctly
-  - Random guessing: ~5% (1/20)
-  - Minimum acceptable: > 50%
-  - Good model: > 90%
+- **Token Acc**：正確預測的個別詞元百分比
+  - 隨機猜測：約 5%（1/20）
+  - 最低可接受：> 50%
+  - 良好模型：> 90%
 
-- **Seq Acc**: Percentage of complete sequences predicted perfectly (strictest metric)
-  - This is what really matters!
-  - Good model: > 80%
-  - Excellent model: > 95%
+- **Seq Acc**：完全正確預測的完整序列百分比（最嚴格的指標）
+  - 這才是真正重要的！
+  - 良好模型：> 80%
+  - 優秀模型：> 95%
 
-- **LR**: Current learning rate
-  - With `--fixed-lr 0.001`, this stays constant at 0.001000
+- **LR**：目前學習率
+  - 使用 `--fixed-lr 0.001` 時，此值保持在 0.001000
 
-### Generation Examples (Every 5 Epochs)
+### 生成範例（每 5 個 Epoch）
 
 ```
 ============================================================
@@ -226,51 +226,51 @@ Example 2: [OK] CORRECT
   Got:      [10, 9, 5]
 ```
 
-**This is the most important output!** Don't just trust metrics—see actual predictions.
+**這是最重要的輸出！** 不要只相信指標——要看實際的預測。
 
-**What to look for:**
-- ✅ **All correct:** Model is learning well
-- ⚠️ **Some correct:** Model is learning but needs more epochs
-- ❌ **All wrong (empty `[]` or repeated tokens):** Model isn't learning → Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+**要注意的：**
+- ✅ **全部正確：** 模型學習良好
+- ⚠️ **部分正確：** 模型正在學習但需要更多 epoch
+- ❌ **全部錯誤（空的 `[]` 或重複詞元）：** 模型沒有學習 → 檢查 [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
 ---
 
-## 💾 Checkpoints
+## 💾 檢查點
 
-Checkpoints are automatically saved to `checkpoints/` directory:
+檢查點會自動儲存到 `checkpoints/` 目錄：
 
 ```
 checkpoints/
-├── checkpoint_best.pt        # Best validation accuracy (use this!)
-├── checkpoint_latest.pt      # Most recent epoch
-├── checkpoint_epoch_004.pt   # Saved every 5 epochs
+├── checkpoint_best.pt        # 最佳驗證準確率（使用這個！）
+├── checkpoint_latest.pt      # 最新的 epoch
+├── checkpoint_epoch_004.pt   # 每 5 個 epoch 儲存
 ├── checkpoint_epoch_009.pt
-└── config.json               # Training configuration
+└── config.json               # 訓練設定
 ```
 
-### Using Checkpoints
+### 使用檢查點
 
-**Resume training:**
+**恢復訓練：**
 ```bash
 python train.py --resume checkpoints/checkpoint_latest.pt --epochs 40
 ```
 
-**Test trained model:**
+**測試訓練好的模型：**
 ```bash
 python test.py --checkpoint checkpoints/checkpoint_best.pt --task copy
 ```
 
-**Interactive testing:**
+**互動式測試：**
 ```bash
 python test.py --checkpoint checkpoints/checkpoint_best.pt --task copy --interactive
 ```
 
 ---
 
-## 🎯 Training Recipes
+## 🎯 訓練配方
 
-### Recipe 1: Quick Test (5 minutes)
-Verify everything works:
+### 配方 1：快速測試（5 分鐘）
+驗證所有東西都運作：
 
 ```bash
 python train.py \
@@ -283,13 +283,13 @@ python train.py \
   --dropout 0.0
 ```
 
-**Expected:** ~80-90% sequence accuracy  
-**Use for:** Quick sanity check
+**預期結果：** 約 80-90% 序列準確率  
+**用途：** 快速健全性檢查
 
 ---
 
-### Recipe 2: Full Copy Task (10 minutes)
-Near-perfect performance:
+### 配方 2：完整複製任務（10 分鐘）
+接近完美的效能：
 
 ```bash
 python train.py \
@@ -302,13 +302,13 @@ python train.py \
   --dropout 0.0
 ```
 
-**Expected:** ~95-99% sequence accuracy  
-**Use for:** Demonstrating Transformer works
+**預期結果：** 約 95-99% 序列準確率  
+**用途：** 展示 Transformer 有效
 
 ---
 
-### Recipe 3: Challenging Reverse (20 minutes)
-Test sequence understanding:
+### 配方 3：挑戰性反轉任務（20 分鐘）
+測試序列理解：
 
 ```bash
 python train.py \
@@ -321,13 +321,13 @@ python train.py \
   --dropout 0.0
 ```
 
-**Expected:** ~85-95% sequence accuracy  
-**Use for:** Non-trivial task evaluation
+**預期結果：** 約 85-95% 序列準確率  
+**用途：** 非簡單任務評估
 
 ---
 
-### Recipe 4: Hard Sort Task (30 minutes)
-Test algorithmic reasoning:
+### 配方 4：困難排序任務（30 分鐘）
+測試演算法推理：
 
 ```bash
 python train.py \
@@ -340,119 +340,119 @@ python train.py \
   --dropout 0.0
 ```
 
-**Expected:** ~70-85% sequence accuracy  
-**Use for:** Pushing model limits
+**預期結果：** 約 70-85% 序列準確率  
+**用途：** 推動模型極限
 
 ---
 
-## ⚙️ Customization
+## ⚙️ 客製化
 
-### Model Size
+### 模型大小
 
-**Tiny (Fast, testing):**
+**極小型（快速、測試用）：**
 ```bash
 --d-model 64 --num-layers 2 --num-heads 4 --d-ff 256
 ```
-- ~200K parameters
-- Trains in 3-5 minutes
-- Good for: Quick experiments
+- 約 200K 參數
+- 3-5 分鐘訓練
+- 適用於：快速實驗
 
-**Small (Default, recommended):**
+**小型（預設、推薦）：**
 ```bash
 --d-model 128 --num-layers 2 --num-heads 4 --d-ff 512
 ```
-- ~1M parameters
-- Trains in 10-15 minutes
-- Good for: Most use cases
+- 約 1M 參數
+- 10-15 分鐘訓練
+- 適用於：大多數使用情境
 
-**Medium (Better accuracy):**
+**中型（更好的準確率）：**
 ```bash
 --d-model 256 --num-layers 3 --num-heads 8 --d-ff 1024
 ```
-- ~10M parameters
-- Trains in 30-45 minutes
-- Good for: High accuracy needs
+- 約 10M 參數
+- 30-45 分鐘訓練
+- 適用於：高準確率需求
 
-**Large (Best results):**
+**大型（最佳結果）：**
 ```bash
 --d-model 512 --num-layers 4 --num-heads 8 --d-ff 2048
 ```
-- ~50M parameters
-- Trains in 60-120 minutes
-- Good for: Maximum performance
+- 約 50M 參數
+- 60-120 分鐘訓練
+- 適用於：最大效能
 
-**Note:** Larger models use more memory and train slower, but may not always achieve better results on simple tasks.
+**注意：** 更大的模型使用更多記憶體且訓練較慢，但在簡單任務上不一定總是能達到更好的結果。
 
 ---
 
-### Learning Rate Tuning
+### 學習率調整
 
-Start with `--fixed-lr 0.001` and adjust if needed:
+從 `--fixed-lr 0.001` 開始，如有需要再調整：
 
 ```bash
-# Model not learning (loss not decreasing):
---fixed-lr 0.002    # Try higher
+# 模型沒有學習（損失沒有下降）：
+--fixed-lr 0.002    # 嘗試較高值
 
-# Model unstable (loss jumping around):
---fixed-lr 0.0005   # Try lower
+# 模型不穩定（損失跳動）：
+--fixed-lr 0.0005   # 嘗試較低值
 
-# Sort task (harder task):
---fixed-lr 0.0005   # Use lower LR
+# 排序任務（較難的任務）：
+--fixed-lr 0.0005   # 使用較低學習率
 ```
 
-**Rule of thumb:**
-- Simple tasks (copy): `0.001`
-- Medium tasks (reverse): `0.001`
-- Hard tasks (sort): `0.0005`
-- Custom large models: `0.0001 - 0.0005`
+**經驗法則：**
+- 簡單任務（複製）：`0.001`
+- 中等任務（反轉）：`0.001`
+- 困難任務（排序）：`0.0005`
+- 客製化大型模型：`0.0001 - 0.0005`
 
 ---
 
-### Dataset Size
+### 資料集大小
 
 ```bash
---num-samples 5000    # Quick training, lower accuracy
---num-samples 10000   # Default, good balance
---num-samples 50000   # Best accuracy, longer training
+--num-samples 5000    # 快速訓練，較低準確率
+--num-samples 10000   # 預設，良好平衡
+--num-samples 50000   # 最佳準確率，較長訓練時間
 ```
 
-**More data = better generalization, but slower training**
+**更多資料 = 更好的泛化，但訓練較慢**
 
 ---
 
-### Batch Size
+### 批次大小
 
 ```bash
---batch-size 32   # Less memory, slower training
---batch-size 64   # Default, good balance
---batch-size 128  # Faster training, more memory
+--batch-size 32   # 較少記憶體，較慢訓練
+--batch-size 64   # 預設，良好平衡
+--batch-size 128  # 較快訓練，更多記憶體
 ```
 
-**Larger batches = faster training but need more RAM**
+**較大批次 = 更快訓練但需要更多 RAM**
 
 ---
 
-## 🔍 Testing Your Model
+## 🔍 測試您的模型
 
-### Basic Testing
+### 基本測試
 
 ```bash
-# Test on test set
+# 在測試集上測試
 python test.py --checkpoint checkpoints/checkpoint_best.pt --task copy
 
-# Output:
+# 輸出：
 # Test Results:
 #    Loss: 0.0234
 #    Token Accuracy: 99.87%
 #    Sequence Accuracy: 98.50%
 ```
 
-### Interactive Testing
+### 互動式測試
 
 ```bash
 python test.py --checkpoint checkpoints/checkpoint_best.pt --task copy --interactive
 
-# Then enter your own sequences:
+# 然後輸入您自己的序列：
 # Input sequence: 5 7 3 9
 # Output: 5 7 3 9
 # [OK] CORRECT!
@@ -460,27 +460,27 @@ python test.py --checkpoint checkpoints/checkpoint_best.pt --task copy --interac
 
 ---
 
-## 🐛 Troubleshooting
+## 🐛 疑難排解
 
-**Model stuck at random guessing (~13% accuracy)?**
-→ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Complete diagnosis guide
+**模型卡在隨機猜測（約 13% 準確率）？**
+→ 參閱 [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - 完整診斷指南
 
-**Quick fixes:**
-- ✅ Use `--fixed-lr 0.001` (not Transformer schedule)
-- ✅ Use `--label-smoothing 0.0` (not 0.1)
-- ✅ Use `--dropout 0.0` for small datasets
+**快速修復：**
+- ✅ 使用 `--fixed-lr 0.001`（不是 Transformer 排程）
+- ✅ 使用 `--label-smoothing 0.0`（不是 0.1）
+- ✅ 對小型資料集使用 `--dropout 0.0`
 
-**Verify your setup works:**
+**驗證您的設定有效：**
 ```bash
 python test_overfit.py
-# Should reach loss ~0.0000 with 100% accuracy
+# 應該達到損失約 0.0000，100% 準確率
 ```
 
 ---
 
-## 📈 Expected Performance Benchmarks
+## 📈 預期效能基準
 
-### Copy Task (20 epochs, fixed-lr 0.001)
+### 複製任務（20 epochs，fixed-lr 0.001）
 
 | Epoch | Train Loss | Val Loss | Token Acc | Seq Acc |
 |-------|------------|----------|-----------|---------|
@@ -489,7 +489,7 @@ python test_overfit.py
 | 5     | 0.03       | 0.02     | 99%       | 96%     |
 | 10    | 0.01       | 0.01     | 99%       | 98%     |
 
-### Reverse Task (30 epochs, fixed-lr 0.001)
+### 反轉任務（30 epochs，fixed-lr 0.001）
 
 | Epoch | Train Loss | Val Loss | Token Acc | Seq Acc |
 |-------|------------|----------|-----------|---------|
@@ -497,7 +497,7 @@ python test_overfit.py
 | 15    | 0.6        | 0.7      | 80%       | 55%     |
 | 30    | 0.2        | 0.3      | 92%       | 80%     |
 
-### Sort Task (50 epochs, fixed-lr 0.0005)
+### 排序任務（50 epochs，fixed-lr 0.0005）
 
 | Epoch | Train Loss | Val Loss | Token Acc | Seq Acc |
 |-------|------------|----------|-----------|---------|
@@ -507,63 +507,63 @@ python test_overfit.py
 
 ---
 
-## 💡 Tips for Success
+## 💡 成功秘訣
 
-1. **Always start with copy task** - If this fails, something is wrong
-2. **Use fixed LR, not Transformer schedule** - Simple is better for small models
-3. **Disable label smoothing** - It hurts algorithmic tasks
-4. **Run overfit test first** - Proves your architecture works
-5. **Monitor sequence accuracy** - It's the metric that really matters
-6. **Check generation examples** - Don't just trust numbers
-7. **Be patient with hard tasks** - Sort needs 50+ epochs
-8. **Save best checkpoint** - Use `checkpoint_best.pt` for deployment
-
----
-
-## 🚀 Next Steps
-
-After successful training:
-
-1. ✅ **Test interactively**: `python test.py --interactive`
-2. 📊 **Try harder tasks**: Copy → Reverse → Sort
-3. 🔬 **Experiment with model size**: Try larger models
-4. 📈 **Scale up data**: Try `--num-samples 50000`
-5. 🌐 **Real-world tasks**: Adapt for translation, summarization
-6. 🎓 **Read the code**: Learn how transformers work internally
+1. **永遠從複製任務開始** - 如果這個失敗，表示有問題
+2. **使用固定學習率，不是 Transformer 排程** - 簡單對小型模型更好
+3. **停用標籤平滑** - 它會損害演算法任務
+4. **先執行過擬合測試** - 證明您的架構有效
+5. **監控序列準確率** - 這才是真正重要的指標
+6. **檢查生成範例** - 不要只相信數字
+7. **對困難任務要有耐心** - 排序需要 50+ epochs
+8. **儲存最佳檢查點** - 部署時使用 `checkpoint_best.pt`
 
 ---
 
-## 📚 Additional Resources
+## 🚀 下一步
 
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Complete debugging guide
-- **[TRAINING_ISSUES.md](TRAINING_ISSUES.md)** - Technical deep-dive on LR schedule issue
-- **[README.md](README.md)** - Main project documentation
-- **Original Paper:** [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+成功訓練後：
 
----
-
-## ❓ FAQ
-
-**Q: Why not use the Transformer LR schedule from the paper?**  
-A: It was designed for large models (d_model=512) and produces learning rates 5-40x too high for small models, causing training to fail completely.
-
-**Q: Can I use the Transformer schedule for large models?**  
-A: Yes! If you have d_model ≥ 512 and train for 50K+ steps, the schedule works well. For small models (d_model ≤ 256), use fixed LR.
-
-**Q: Why disable label smoothing?**  
-A: Label smoothing helps when there are multiple valid answers (translation). For algorithmic tasks with one correct answer (copy/reverse/sort), it makes learning harder.
-
-**Q: How long should training take?**  
-A: On CPU: Copy (10 min), Reverse (20 min), Sort (30 min). On GPU: 2-5x faster.
-
-**Q: My model outputs empty sequences, help!**  
-A: See [TROUBLESHOOTING.md](TROUBLESHOOTING.md). You likely need `--fixed-lr 0.001`.
-
-**Q: What's the minimum accuracy I should expect?**  
-A: Copy: 95%+, Reverse: 85%+, Sort: 70%+. Lower means something is wrong.
+1. ✅ **互動式測試**：`python test.py --interactive`
+2. 📊 **嘗試更困難的任務**：複製 → 反轉 → 排序
+3. 🔬 **實驗模型大小**：嘗試更大的模型
+4. 📈 **擴大資料規模**：嘗試 `--num-samples 50000`
+5. 🌐 **真實世界任務**：適應翻譯、摘要等任務
+6. 🎓 **閱讀程式碼**：學習 Transformer 內部運作
 
 ---
 
-Happy training! 🚀
+## 📚 其他資源
 
-If you encounter issues, check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) first!
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - 完整除錯指南
+- **[TRAINING_ISSUES.md](TRAINING_ISSUES.md)** - 學習率排程問題的技術深入探討
+- **[README.md](README.md)** - 主要專案文件
+- **原始論文：** [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+
+---
+
+## ❓ 常見問題
+
+**問：為什麼不使用論文中的 Transformer 學習率排程？**  
+答：它是為大型模型（d_model=512）設計的，對小型模型會產生過高 5-40 倍的學習率，導致訓練完全失敗。
+
+**問：我可以在大型模型上使用 Transformer 排程嗎？**  
+答：可以！如果您有 d_model ≥ 512 且訓練 50K+ 步，該排程運作良好。對於小型模型（d_model ≤ 256），使用固定學習率。
+
+**問：為什麼停用標籤平滑？**  
+答：標籤平滑在有多個有效答案（翻譯）時有幫助。對於只有一個正確答案的演算法任務（複製/反轉/排序），它會使學習更困難。
+
+**問：訓練應該花多長時間？**  
+答：在 CPU 上：複製（10 分鐘）、反轉（20 分鐘）、排序（30 分鐘）。在 GPU 上：快 2-5 倍。
+
+**問：我的模型輸出空序列，求助！**  
+答：參閱 [TROUBLESHOOTING.md](TROUBLESHOOTING.md)。您可能需要 `--fixed-lr 0.001`。
+
+**問：我應該期待的最低準確率是多少？**  
+答：複製：95%+、反轉：85%+、排序：70%+。更低表示有問題。
+
+---
+
+訓練愉快！🚀
+
+如果遇到問題，請先查看 [TROUBLESHOOTING.md](TROUBLESHOOTING.md)！

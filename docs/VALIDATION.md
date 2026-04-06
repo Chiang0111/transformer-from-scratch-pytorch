@@ -1,86 +1,86 @@
-# Validation & Testing Strategy
+# 驗證與測試策略
 
-**Why we don't use Jupyter notebooks for demos**
+**為什麼我們不使用 Jupyter Notebook 來做展示**
 
-This document explains our validation approach and why it's better than typical tutorial repos.
-
----
-
-## 🎯 Philosophy
-
-This repo is **production-ready code**, not a tutorial notebook. Our validation strategy reflects that:
-
-✅ **Automated & reproducible** - Can run in CI/CD  
-✅ **Version-controlled properly** - Clean git diffs  
-✅ **Programmatic testing** - Not manual exploration  
-✅ **Maintainable** - Doesn't break silently
+本文件說明我們的驗證方法，以及為什麼它優於典型的教學專案。
 
 ---
 
-## 🧪 Validation Layers
+## 🎯 理念
 
-### Layer 1: Unit Tests (Fast, Always Run)
+這個專案是**生產就緒的程式碼**，不是教學筆記本。我們的驗證策略反映了這一點：
 
-**Location:** `tests/test_*.py`  
-**Coverage:** 80+ tests for all components  
-**Runtime:** ~1 minute  
+✅ **自動化且可重現** - 可在 CI/CD 中執行  
+✅ **適當的版本控制** - 清晰的 git diff  
+✅ **程式化測試** - 非手動探索  
+✅ **可維護** - 不會無聲地損壞
+
+---
+
+## 🧪 驗證層級
+
+### 層級 1：單元測試（快速，永遠執行）
+
+**位置：** `tests/test_*.py`  
+**覆蓋率：** 80+ 測試涵蓋所有元件  
+**執行時間：** 約 1 分鐘  
 
 ```bash
 pytest tests/ -v
 ```
 
-**What they test:**
-- Individual components (attention, encoder, decoder)
-- Shape transformations
-- Mask creation
-- Edge cases
+**測試內容：**
+- 個別元件（注意力、編碼器、解碼器）
+- 形狀轉換
+- 遮罩建立
+- 邊界情況
 
-**Why:** Catch bugs early, run on every commit
+**為什麼：** 及早發現 bug，每次 commit 都執行
 
 ---
 
-### Layer 2: Integration Tests (Medium, Run on PR)
+### 層級 2：整合測試（中等，在 PR 時執行）
 
-**Location:** `tests/test_training.py`  
-**Runtime:** ~5-10 minutes  
+**位置：** `tests/test_training.py`  
+**執行時間：** 約 5-10 分鐘  
 
 ```bash
 pytest tests/test_training.py -v
 ```
 
-**What they test:**
-- Training doesn't crash
-- Checkpoints are created
-- Model can overfit single batch
-- Resume training works
+**測試內容：**
+- 訓練不會崩潰
+- 檢查點已建立
+- 模型可以過擬合單一批次
+- 恢復訓練有效
 
-**Why:** Catch real-world issues before merging
+**為什麼：** 在合併前發現實際問題
 
 ---
 
-### Layer 3: Benchmark Suite (Slow, Run on Release)
+### 層級 3：基準測試套件（慢，在發布時執行）
 
-**Location:** `benchmark.py`  
-**Runtime:** ~30-60 minutes (full), ~10 minutes (quick)  
+**位置：** `benchmark.py`  
+**執行時間：** 約 30-60 分鐘（完整）、約 10 分鐘（快速）  
 
 ```bash
-# Full benchmark (all tasks, full epochs)
+# 完整基準測試（所有任務，完整 epoch）
 python benchmark.py
 
-# Quick benchmark (CI/CD mode)
+# 快速基準測試（CI/CD 模式）
 python benchmark.py --quick
 
-# Single task
+# 單一任務
 python benchmark.py --task copy
 ```
 
-**What it tests:**
-- All three tasks train to expected accuracy
-- Copy: ≥95% accuracy in 20 epochs
-- Reverse: ≥80% accuracy in 30 epochs
-- Sort: ≥65% accuracy in 50 epochs
+**測試內容：**
+- 所有三個任務都訓練到預期準確率
+- 複製：20 epochs 內 ≥95% 準確率
+- 反轉：30 epochs 內 ≥80% 準確率
+- 排序：50 epochs 內 ≥65% 準確率
 
-**Output:**
+**輸出：**
 ```
 ==================================================================
 BENCHMARK SUMMARY
@@ -98,33 +98,33 @@ Total time: 48.8m
 📊 Results saved to: benchmark_results/benchmark_20260406_143022.json
 ```
 
-**Why:** Validates our documented claims are accurate
+**為什麼：** 驗證我們文件中的聲明準確
 
 ---
 
-### Layer 4: Demo Script (Interactive, Manual)
+### 層級 4：展示腳本（互動式，手動）
 
-**Location:** `demo.py`  
-**Runtime:** Instant  
+**位置：** `demo.py`  
+**執行時間：** 即時  
 
 ```bash
-# Show predictions on test examples
+# 在測試範例上顯示預測
 python demo.py
 
-# Interactive mode - enter your own sequences
+# 互動模式 - 輸入您自己的序列
 python demo.py --interactive
 
-# Use specific checkpoint
+# 使用特定檢查點
 python demo.py --checkpoint benchmarks/copy/checkpoint_best.pt --task copy
 ```
 
-**What it does:**
-- Beautiful CLI demo (better than Jupyter!)
-- Shows actual model predictions
-- Color-coded correct/wrong
-- Interactive testing mode
+**功能：**
+- 漂亮的 CLI 展示（比 Jupyter 更好！）
+- 顯示實際的模型預測
+- 正確/錯誤的顏色標示
+- 互動測試模式
 
-**Output:**
+**輸出：**
 ```
 ============================================================
   TRANSFORMER DEMO - COPY TASK
@@ -161,15 +161,15 @@ python demo.py --checkpoint benchmarks/copy/checkpoint_best.pt --task copy
   ✨ Excellent performance!
 ```
 
-**Why:** Great for showing off the model, better UX than Jupyter
+**為什麼：** 展示模型的好方法，比 Jupyter 有更好的使用者體驗
 
 ---
 
-## 🚫 Why Not Jupyter Notebooks?
+## 🚫 為什麼不用 Jupyter Notebook？
 
-### Problem 1: Version Control Nightmare
+### 問題 1：版本控制的惡夢
 
-**Jupyter notebooks are JSON:**
+**Jupyter notebook 是 JSON：**
 ```json
 {
  "cells": [
@@ -198,21 +198,21 @@ python demo.py --checkpoint benchmarks/copy/checkpoint_best.pt --task copy
 }
 ```
 
-**Git diff is unreadable:**
-- Can't see what actually changed
-- Output gets committed (bloats repo)
-- Cell execution order causes conflicts
-- Merge conflicts are hell
+**Git diff 無法閱讀：**
+- 看不出實際改變了什麼
+- 輸出被 commit（膨脹專案）
+- Cell 執行順序造成衝突
+- 合併衝突是地獄
 
-**Our Python scripts:**
-- Clean, readable diffs
-- No output in repo
-- Deterministic execution
-- Easy to merge
+**我們的 Python 腳本：**
+- 清晰、可讀的 diff
+- 專案中沒有輸出
+- 確定性執行
+- 容易合併
 
-### Problem 2: Execution Order Issues
+### 問題 2：執行順序問題
 
-**Jupyter problems:**
+**Jupyter 問題：**
 ```python
 # Cell 1
 x = 10
@@ -223,49 +223,49 @@ y = x + 5
 # Cell 3
 x = 20
 
-# If you run: 1 → 2 → 3 → 2, you get different results!
+# 如果您執行：1 → 2 → 3 → 2，會得到不同的結果！
 ```
 
-**Users run cells out of order:**
-- State becomes inconsistent
-- "Works on my machine" problems
-- Hard to reproduce bugs
-- Not suitable for testing
+**使用者無序執行 cell：**
+- 狀態變得不一致
+- 「在我的機器上可以運作」的問題
+- 難以重現 bug
+- 不適合測試
 
-**Our scripts:**
-- Linear execution only
-- Deterministic
-- No hidden state
-- Reproducible
+**我們的腳本：**
+- 僅線性執行
+- 確定性
+- 沒有隱藏狀態
+- 可重現
 
-### Problem 3: Not Production-Ready
+### 問題 3：非生產就緒
 
-**This repo's philosophy (from README):**
+**本專案的理念（來自 README）：**
 
-| Most Tutorials | **This Repository** |
-|---|---|
-| Single Jupyter notebook | **Modular Python package** |
-| "Just make it work" | **Production-ready code** |
+| 大多數教學 | **本專案** |
+|-----------|-----------|
+| 單一 Jupyter notebook | **模組化的 Python 套件** |
+| 「只要能動就好」 | **生產就緒的程式碼** |
 
-**Adding Jupyter contradicts the core value proposition!**
+**加入 Jupyter 會違背核心價值主張！**
 
-### Problem 4: Can't Automate
+### 問題 4：無法自動化
 
-**Jupyter notebooks:**
-- ❌ Hard to run in CI/CD
-- ❌ Can't easily parse results
-- ❌ Manual execution required
-- ❌ No programmatic testing
+**Jupyter notebook：**
+- ❌ 難以在 CI/CD 中執行
+- ❌ 無法輕易解析結果
+- ❌ 需要手動執行
+- ❌ 沒有程式化測試
 
-**Our approach:**
-- ✅ `pytest` for automated testing
-- ✅ `benchmark.py` for validation
-- ✅ CI/CD integration ready
-- ✅ Programmatic result checking
+**我們的方法：**
+- ✅ `pytest` 用於自動測試
+- ✅ `benchmark.py` 用於驗證
+- ✅ CI/CD 整合就緒
+- ✅ 程式化結果檢查
 
-### Problem 5: Dependency Bloat
+### 問題 5：相依性膨脹
 
-**Jupyter requires:**
+**Jupyter 需要：**
 ```
 jupyter
 ipykernel
@@ -275,67 +275,67 @@ nbconvert
 ...
 ```
 
-**Our demos require:**
+**我們的展示需要：**
 ```
-(nothing extra - uses existing dependencies)
+（無額外需求 - 使用現有相依性）
 ```
 
-### Problem 6: Maintenance Burden
+### 問題 6：維護負擔
 
-**Jupyter notebooks:**
-- Break when APIs change (silently!)
-- Require manual re-execution after updates
-- Hard to keep in sync with code
-- Cell outputs get stale
+**Jupyter notebook：**
+- API 改變時會損壞（無聲地！）
+- 更新後需要手動重新執行
+- 難以與程式碼保持同步
+- Cell 輸出會過時
 
-**Our scripts:**
-- Tested in CI/CD
-- Break loudly when APIs change
-- Always use latest code
-- Always fresh output
+**我們的腳本：**
+- 在 CI/CD 中測試
+- API 改變時會明確損壞
+- 永遠使用最新程式碼
+- 永遠是新鮮的輸出
 
 ---
 
-## ✅ Our Approach is Better
+## ✅ 我們的方法更好
 
-### What We Provide Instead
+### 我們提供的替代方案
 
-1. **`benchmark.py`** - Automated validation
-   - Tests all claims in documentation
-   - Saves results to JSON
-   - CI/CD ready
-   - Reproducible
+1. **`benchmark.py`** - 自動化驗證
+   - 測試文件中的所有聲明
+   - 將結果儲存為 JSON
+   - CI/CD 就緒
+   - 可重現
 
-2. **`demo.py`** - Interactive demonstration
-   - Beautiful CLI output
-   - Interactive mode for exploration
-   - Better UX than Jupyter
-   - No browser required
+2. **`demo.py`** - 互動式展示
+   - 漂亮的 CLI 輸出
+   - 探索用的互動模式
+   - 比 Jupyter 更好的使用者體驗
+   - 不需要瀏覽器
 
-3. **`tests/test_training.py`** - Integration tests
-   - Verify training works
-   - Catch regressions
-   - Run on every PR
-   - Programmatic validation
+3. **`tests/test_training.py`** - 整合測試
+   - 驗證訓練有效
+   - 抓到回歸問題
+   - 每個 PR 都執行
+   - 程式化驗證
 
-4. **Documentation with actual results**
-   - Benchmarks run regularly
-   - Results versioned in JSON
-   - Claims are validated
-   - Not "trust me"
+4. **包含實際結果的文件**
+   - 定期執行基準測試
+   - 結果以 JSON 版本控制
+   - 聲明已驗證
+   - 不是「相信我」
 
-### Advantages
+### 優勢
 
-**Reproducibility:**
+**可重現性：**
 ```bash
-# Anyone can reproduce our claims:
+# 任何人都可以重現我們的聲明：
 python benchmark.py
 
-# Compare with Jupyter:
-# "Um, which cells do I run? In what order? Why is my output different?"
+# 與 Jupyter 比較：
+# 「嗯，我要執行哪些 cell？以什麼順序？為什麼我的輸出不同？」
 ```
 
-**Automation:**
+**自動化：**
 ```yaml
 # GitHub Actions
 - name: Validate training
@@ -344,87 +344,87 @@ python benchmark.py
     pytest tests/test_training.py
 ```
 
-**Maintenance:**
+**維護：**
 ```bash
-# After updating code:
-pytest tests/  # Breaks loudly if incompatible
-python benchmark.py  # Re-validates claims
+# 更新程式碼後：
+pytest tests/  # 如果不相容會明確損壞
+python benchmark.py  # 重新驗證聲明
 
-# With Jupyter:
-# Silently broken until someone manually runs it
+# 使用 Jupyter：
+# 無聲地損壞，直到有人手動執行它
 ```
 
-**Professional:**
-- Shows best practices
-- Demonstrates testing skills
-- Production-ready approach
-- Portfolio-worthy
+**專業性：**
+- 展示最佳實務
+- 展示測試技能
+- 生產就緒的方法
+- 值得放入作品集
 
 ---
 
-## 📊 Validation Status
+## 📊 驗證狀態
 
-### Automated Tests
+### 自動化測試
 
-- ✅ Unit tests: 80+ tests passing
-- ✅ Architecture verification: Overfit test passes
-- ✅ Integration tests: Training smoke tests pass
+- ✅ 單元測試：80+ 測試通過
+- ✅ 架構驗證：過擬合測試通過
+- ✅ 整合測試：訓練煙霧測試通過
 
-### Manual Validation
+### 手動驗證
 
-- ✅ Copy task: 98.6% accuracy (≥95% target)
-- ⏳ Reverse task: Running benchmark...
-- ⏳ Sort task: Running benchmark...
+- ✅ 複製任務：98.6% 準確率（≥95% 目標）
+- ⏳ 反轉任務：正在執行基準測試...
+- ⏳ 排序任務：正在執行基準測試...
 
-### Continuous Validation
+### 持續驗證
 
-- [ ] GitHub Actions CI/CD setup
-- [ ] Weekly benchmark runs
-- [ ] Results published to docs
+- [ ] 設定 GitHub Actions CI/CD
+- [ ] 每週基準測試執行
+- [ ] 將結果發布到文件
 
 ---
 
-## 🎓 Key Lessons
+## 🎓 關鍵教訓
 
-### For Users
+### 對使用者
 
-**If you want to explore the model:**
+**如果您想探索模型：**
 ```bash
 python demo.py --interactive
 ```
 
-**If you want to validate it works:**
+**如果您想驗證它有效：**
 ```bash
 python benchmark.py --task copy
 ```
 
-**If you're developing:**
+**如果您正在開發：**
 ```bash
 pytest tests/ -v
 ```
 
-### For Maintainers
+### 對維護者
 
-**Jupyter is tempting but wrong for this repo:**
-- Contradicts "production-ready" philosophy
-- Harder to maintain
-- Worse for version control
-- Can't automate
+**Jupyter 很誘人但對這個專案不對：**
+- 違背「生產就緒」理念
+- 更難維護
+- 對版本控制更糟
+- 無法自動化
 
-**Better approach:**
-- Clean Python scripts
-- Automated testing
-- Beautiful CLI output
-- Programmatic validation
-
----
-
-## 📖 Further Reading
-
-- **TROUBLESHOOTING.md** - If training fails
-- **TRAINING.md** - Training guide
-- **README.md** - Main documentation
+**更好的方法：**
+- 清晰的 Python 腳本
+- 自動化測試
+- 漂亮的 CLI 輸出
+- 程式化驗證
 
 ---
 
-**Summary:** We validate our claims through automated testing, not manual notebooks. This is more professional, maintainable, and reproducible.
+## 📖 延伸閱讀
+
+- **TROUBLESHOOTING.md** - 如果訓練失敗
+- **TRAINING.md** - 訓練指南
+- **README.md** - 主要文件
+
+---
+
+**總結：** 我們透過自動化測試而非手動筆記本來驗證我們的聲明。這更專業、可維護且可重現。

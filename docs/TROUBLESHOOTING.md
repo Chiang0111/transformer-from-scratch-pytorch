@@ -1,14 +1,14 @@
-# Troubleshooting Guide
+# 疑難排解指南
 
-This guide helps you diagnose and fix common training issues. If your model isn't learning, start here!
+本指南協助您診斷和修復常見的訓練問題。如果您的模型沒有學習，從這裡開始！
 
 ---
 
-## 🚨 CRITICAL: Model Stuck at Random Guessing
+## 🚨 重大問題：模型卡在隨機猜測
 
-### Symptoms
+### 症狀
 
-You'll know you have this problem if you see:
+如果您看到以下情況，表示您遇到了這個問題：
 
 ```
 Epoch 10/30
@@ -18,39 +18,39 @@ Epoch 10/30
 Example 1: [X] WRONG
   Input:    [5, 7, 3]
   Expected: [5, 7, 3]
-  Got:      []   ← Generates empty sequences or same token repeatedly
+  Got:      []   ← 生成空序列或重複相同詞元
 ```
 
-**Key indicators:**
-- ✗ Loss stuck around **2.9-3.0** (≈ -log(1/20) = 2.996 for vocab_size=20)
-- ✗ Token accuracy around **5-15%** (random guessing is ~5%)
-- ✗ Sequence accuracy **stays at 0%** for many epochs
-- ✗ Model generates **empty sequences `[]`** or END token immediately
-- ✗ Perplexity near vocabulary size (18-20 for vocab_size=20)
-- ✗ Validation accuracy **frozen at exact same value** (e.g., always 13.02%)
+**關鍵指標：**
+- ✗ 損失卡在約 **2.9-3.0**（vocab_size=20 時 ≈ -log(1/20) = 2.996）
+- ✗ 詞元準確率約 **5-15%**（隨機猜測約 5%）
+- ✗ 序列準確率在多個 epoch 中**保持在 0%**
+- ✗ 模型生成**空序列 `[]`** 或立即生成 END 詞元
+- ✗ 困惑度接近詞彙表大小（vocab_size=20 時為 18-20）
+- ✗ 驗證準確率**凍結在完全相同的值**（例如，總是 13.02%）
 
-### Root Cause
+### 根本原因
 
-**The Transformer learning rate schedule is incompatible with small models on simple tasks.**
+**Transformer 學習率排程與簡單任務上的小型模型不相容。**
 
-The original Transformer paper designed the LR schedule for:
-- **Large models:** d_model=512, 6 layers (~100M parameters)
-- **Complex tasks:** Machine translation with millions of samples
-- **Long training:** 100,000+ steps
+原始 Transformer 論文為以下情境設計學習率排程：
+- **大型模型：** d_model=512、6 層（約 100M 參數）
+- **複雜任務：** 具有數百萬樣本的機器翻譯
+- **長時間訓練：** 100,000+ 步
 
-Your model is:
-- **Small:** d_model=128, 2 layers (~1M parameters)
-- **Simple task:** Copy/reverse/sort with 10K samples
-- **Short training:** ~4,000 steps (30 epochs)
+您的模型是：
+- **小型：** d_model=128、2 層（約 1M 參數）
+- **簡單任務：** 具有 10K 樣本的複製/反轉/排序
+- **短時間訓練：** 約 4,000 步（30 epochs）
 
-The LR schedule produces learning rates **5-40x too high** for small models, causing training instability.
+該學習率排程對小型模型產生**過高 5-40 倍**的學習率，導致訓練不穩定。
 
-### The Solution ✅
+### 解決方案 ✅
 
-**Use fixed learning rate instead of the Transformer schedule:**
+**使用固定學習率而非 Transformer 排程：**
 
 ```bash
-# ✅ CORRECT - Use fixed LR
+# ✅ 正確 - 使用固定學習率
 python train.py --task copy --epochs 20 \
   --fixed-lr 0.001 \
   --label-smoothing 0.0 \
@@ -58,16 +58,16 @@ python train.py --task copy --epochs 20 \
 ```
 
 ```bash
-# ❌ WRONG - Don't use Transformer schedule for small models
+# ❌ 錯誤 - 不要對小型模型使用 Transformer 排程
 python train.py --task copy --epochs 30 \
   --lr-factor 10.0 \
   --warmup-steps 500 \
   --label-smoothing 0.0
 ```
 
-### Expected Results with Fixed LR
+### 使用固定學習率的預期結果
 
-With `--fixed-lr 0.001`, you should see:
+使用 `--fixed-lr 0.001` 時，您應該看到：
 
 ```
 Epoch 1/20
@@ -86,244 +86,244 @@ Epoch 3/20
 Example 1: [OK] CORRECT
   Input:    [5, 7, 3]
   Expected: [5, 7, 3]
-  Got:      [5, 7, 3]  ← ✅ Actually works!
+  Got:      [5, 7, 3]  ← ✅ 真的有效！
 ```
 
-**Progress timeline:**
-- **Epoch 1:** 66% token accuracy, 28% sequence accuracy (learning!)
-- **Epoch 3:** 98% token accuracy, 89% sequence accuracy (near perfect!)
-- **Epoch 5-7:** 99%+ token accuracy, 95-98% sequence accuracy (converged!)
+**進度時間軸：**
+- **Epoch 1：** 66% 詞元準確率、28% 序列準確率（正在學習！）
+- **Epoch 3：** 98% 詞元準確率、89% 序列準確率（接近完美！）
+- **Epoch 5-7：** 99%+ 詞元準確率、95-98% 序列準確率（收斂了！）
 
 ---
 
-## 🧪 How to Verify Your Setup
+## 🧪 如何驗證您的設定
 
-If you're not sure whether the problem is your code or hyperparameters, run this test:
+如果您不確定問題是出在程式碼還是超參數，執行此測試：
 
 ```bash
 python test_overfit.py
 ```
 
-This trains on **just 4 samples** to see if the model *can* learn at all.
+這會在**僅 4 個樣本**上訓練，以查看模型*能否*學習。
 
-**If you see:**
+**如果您看到：**
 ```
 Step 500: Loss=0.0000, Token Acc=100.0%, Seq Acc=33.3%
 SUCCESS: Model can overfit! Training setup is correct.
 ```
 
-✅ **Your architecture is fine!** The problem is just hyperparameters (use `--fixed-lr 0.001`)
+✅ **您的架構沒問題！** 問題只是超參數（使用 `--fixed-lr 0.001`）
 
-**If the overfit test fails:**
-❌ **There's a bug in your code.** The model architecture has a problem.
+**如果過擬合測試失敗：**
+❌ **您的程式碼有 bug。** 模型架構有問題。
 
 ---
 
-## 📊 Understanding Why the LR Schedule Fails
+## 📊 理解學習率排程為何失敗
 
-### What the Transformer LR Schedule Does
+### Transformer 學習率排程的作用
 
-The schedule from the original paper:
+來自原始論文的排程：
 ```python
 lr = d_model^(-0.5) * min(step^(-0.5), step * warmup^(-1.5)) * lr_factor
 ```
 
-With `d_model=128, warmup=500, lr_factor=10.0`:
+使用 `d_model=128, warmup=500, lr_factor=10.0` 時：
 
-| Step | Learning Rate | Problem |
-|------|---------------|---------|
-| 1 | 0.000079 | Too low initially |
-| 100 | 0.007906 | **7.9x too high** |
-| 500 (peak) | 0.039528 | **39x too high!** |
-| Average (Epoch 1) | 0.005613 | **5.6x too high** |
+| 步數 | 學習率 | 問題 |
+|------|--------|------|
+| 1 | 0.000079 | 初始太低 |
+| 100 | 0.007906 | **高 7.9 倍** |
+| 500（峰值）| 0.039528 | **高 39 倍！** |
+| 平均（Epoch 1）| 0.005613 | **高 5.6 倍** |
 
-**What works:** Fixed LR = 0.001
+**有效的：** 固定學習率 = 0.001
 
-### Visual Comparison
+### 視覺化比較
 
 ```
-Transformer Schedule (FAILS):
+Transformer 排程（失敗）：
 LR
-│        ╱──────╲              ← Reaches 0.0395 (way too high!)
+│        ╱──────╲              ← 達到 0.0395（太高了！）
 │       ╱         ╲___
 │      ╱              ╲___
 │     ╱                   ╲___
 │____╱                        ╲___
-└────────────────────────────────→ Step
-    500 (peak)
+└────────────────────────────────→ 步數
+    500（峰值）
 
-Fixed LR (WORKS):
+固定學習率（有效）：
 LR
-│ ────────────────────────────  ← Stable at 0.001
+│ ────────────────────────────  ← 穩定在 0.001
 │
 │
 │
-└────────────────────────────────→ Step
+└────────────────────────────────→ 步數
 ```
 
-When LR is too high:
-- Weights "jump around" too much
-- Model never converges to a solution
-- Like trying to land a plane but over-correcting each time
+當學習率太高時：
+- 權重「跳動」太多
+- 模型永遠無法收斂到解
+- 就像試圖降落飛機但每次都過度修正
 
-When LR is just right:
-- Weights adjust smoothly
-- Model finds the pattern
-- Converges quickly and reliably
+當學習率恰好時：
+- 權重平滑調整
+- 模型找到模式
+- 快速且可靠地收斂
 
 ---
 
-## 🔧 Complete Troubleshooting Decision Tree
+## 🔧 完整疑難排解決策樹
 
 ```
-Is your model stuck at random guessing (~13% accuracy)?
+您的模型是否卡在隨機猜測（約 13% 準確率）？
 │
-├─ YES → Use fixed LR instead of Transformer schedule
+├─ 是 → 使用固定學習率而非 Transformer 排程
 │        python train.py --task copy --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
 │
-└─ NO → Is loss decreasing but slowly?
+└─ 否 → 損失是否下降但很慢？
         │
-        ├─ YES → Two possibilities:
-        │        1. Disable label smoothing: --label-smoothing 0.0
-        │        2. Disable dropout for small datasets: --dropout 0.0
+        ├─ 是 → 兩種可能：
+        │        1. 停用標籤平滑：--label-smoothing 0.0
+        │        2. 對小型資料集停用 dropout：--dropout 0.0
         │
-        └─ NO → Is loss unstable (jumps up and down)?
+        └─ 否 → 損失是否不穩定（上下跳動）？
                  │
-                 ├─ YES → LR might be too high
-                 │        Try --fixed-lr 0.0005 (half of default)
+                 ├─ 是 → 學習率可能太高
+                 │        嘗試 --fixed-lr 0.0005（預設的一半）
                  │
-                 └─ NO → Check your data/masks
-                          Run: python debug_data.py
+                 └─ 否 → 檢查您的資料/遮罩
+                          執行：python debug_data.py
 ```
 
 ---
 
-## 📋 Quick Reference: Common Issues
+## 📋 快速參考：常見問題
 
-### Issue: Empty sequences `[]`
+### 問題：空序列 `[]`
 
-**Symptom:** Model generates nothing
-**Cause:** Predicts END token immediately (LR too high)
-**Fix:**
+**症狀：** 模型不生成任何東西
+**原因：** 立即預測 END 詞元（學習率太高）
+**修復：**
 ```bash
 python train.py --task copy --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
 ```
 
-### Issue: Repeats same token (e.g., `[7, 7, 7, 7, ...]`)
+### 問題：重複相同詞元（例如 `[7, 7, 7, 7, ...]`）
 
-**Symptom:** Model stuck on one token
-**Cause:** Learned to predict most common token (LR too high)
-**Fix:**
+**症狀：** 模型卡在一個詞元上
+**原因：** 學會預測最常見的詞元（學習率太高）
+**修復：**
 ```bash
 python train.py --task copy --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
 ```
 
-### Issue: Loss not decreasing
+### 問題：損失沒有下降
 
-**Symptom:** Loss stays around 2.9-3.0
-**Cause 1:** Using Transformer LR schedule on small model
-**Fix:**
+**症狀：** 損失保持在約 2.9-3.0
+**原因 1：** 在小型模型上使用 Transformer 學習率排程
+**修復：**
 ```bash
 --fixed-lr 0.001
 ```
 
-**Cause 2:** Label smoothing interfering
-**Fix:**
+**原因 2：** 標籤平滑干擾
+**修復：**
 ```bash
 --label-smoothing 0.0
 ```
 
-### Issue: Training works but validation doesn't improve
+### 問題：訓練有效但驗證沒有改善
 
-**Symptom:** Train acc: 90%, Val acc: 20%
-**Cause:** Overfitting (model memorizing training data)
-**Fix:**
+**症狀：** 訓練準確率：90%，驗證準確率：20%
+**原因：** 過擬合（模型記住訓練資料）
+**修復：**
 ```bash
---dropout 0.1              # Add regularization
---num-samples 50000        # Use more data
+--dropout 0.1              # 加入正規化
+--num-samples 50000        # 使用更多資料
 ```
 
-### Issue: Training too slow
+### 問題：訓練太慢
 
-**Symptom:** Each epoch takes 5+ minutes
-**Fix:**
+**症狀：** 每個 epoch 需要 5 分鐘以上
+**修復：**
 ```bash
---d-model 64               # Smaller model
---num-layers 2             # Fewer layers
---batch-size 32            # Smaller batches
---num-samples 5000         # Less data
+--d-model 64               # 較小的模型
+--num-layers 2             # 較少的層
+--batch-size 32            # 較小的批次
+--num-samples 5000         # 較少的資料
 ```
 
 ---
 
-## 🎯 When to Use What
+## 🎯 何時使用什麼
 
-### Use Fixed LR (--fixed-lr 0.001) when:
-- ✅ Model size: d_model ≤ 256
-- ✅ Task: Simple (copy, reverse, sort)
-- ✅ Dataset: Small to medium (< 50K samples)
-- ✅ Training: Short (< 10K steps)
-- **This covers most educational/tutorial use cases**
+### 使用固定學習率（--fixed-lr 0.001）當：
+- ✅ 模型大小：d_model ≤ 256
+- ✅ 任務：簡單（複製、反轉、排序）
+- ✅ 資料集：小到中型（< 50K 樣本）
+- ✅ 訓練：短時間（< 10K 步）
+- **這涵蓋大多數教育/教學用途**
 
-### Use Transformer LR Schedule when:
-- ✅ Model size: d_model ≥ 512
-- ✅ Task: Complex (translation, summarization)
-- ✅ Dataset: Large (millions of samples)
-- ✅ Training: Long (100K+ steps)
-- **This is for production-scale models**
+### 使用 Transformer 學習率排程當：
+- ✅ 模型大小：d_model ≥ 512
+- ✅ 任務：複雜（翻譯、摘要）
+- ✅ 資料集：大型（數百萬樣本）
+- ✅ 訓練：長時間（100K+ 步）
+- **這是用於生產規模的模型**
 
-### Label Smoothing:
-- ❌ **OFF** (0.0) for: Copy, reverse, sort (one correct answer)
-- ✅ **ON** (0.1) for: Translation, generation (multiple valid outputs)
+### 標籤平滑：
+- ❌ **關閉**（0.0）用於：複製、反轉、排序（一個正確答案）
+- ✅ **開啟**（0.1）用於：翻譯、生成（多個有效輸出）
 
-### Dropout:
-- ❌ **OFF** (0.0) for: Small datasets (< 10K samples)
-- ✅ **ON** (0.1) for: Large datasets (> 50K samples)
+### Dropout：
+- ❌ **關閉**（0.0）用於：小型資料集（< 10K 樣本）
+- ✅ **開啟**（0.1）用於：大型資料集（> 50K 樣本）
 
 ---
 
-## 🔬 Debugging Commands
+## 🔬 除錯指令
 
 ```bash
-# 1. Verify architecture works (should reach loss ~0.0)
+# 1. 驗證架構有效（應達到損失約 0.0）
 python test_overfit.py
 
-# 2. Check data format and masks
+# 2. 檢查資料格式和遮罩
 python debug_data.py
 
-# 3. Check encoder/decoder outputs
+# 3. 檢查編碼器/解碼器輸出
 python debug_encoder.py
 
-# 4. Check gradient flow
+# 4. 檢查梯度流
 python debug_gradients.py
 
-# 5. Visualize LR schedule
+# 5. 視覺化學習率排程
 python debug_lr_schedule.py
 ```
 
 ---
 
-## 💡 Pro Tips
+## 💡 專業秘訣
 
-1. **Always start with fixed LR** - It just works for small models
-2. **Disable label smoothing for algorithmic tasks** - It makes learning harder
-3. **Run overfit test first** - Proves your architecture is correct
-4. **Monitor sequence accuracy, not just loss** - It's the real metric that matters
-5. **Check generation examples** - Don't just trust numbers, see actual outputs
-6. **Start simple, scale up** - Copy task first, then reverse, then sort
-
----
-
-## 📚 Further Reading
-
-- **TRAINING_ISSUES.md** - Deep technical analysis of the LR schedule problem
-- **TRAINING.md** - Complete training guide with recipes
-- **Original Transformer Paper** - Vaswani et al., 2017 (for large models)
+1. **永遠從固定學習率開始** - 它對小型模型就是有效
+2. **對演算法任務停用標籤平滑** - 它會使學習更困難
+3. **先執行過擬合測試** - 證明您的架構正確
+4. **監控序列準確率，不只是損失** - 這是真正重要的指標
+5. **檢查生成範例** - 不要只相信數字，要看實際輸出
+6. **從簡單開始，逐步擴大** - 先複製任務，然後反轉，然後排序
 
 ---
 
-**Still stuck?** Open an issue with:
-1. Full command you ran
-2. Output of `python test_overfit.py`
-3. First 5 epochs of training logs
-4. OS and PyTorch version
+## 📚 延伸閱讀
+
+- **TRAINING_ISSUES.md** - 學習率排程問題的深入技術分析
+- **TRAINING.md** - 完整訓練指南與配方
+- **原始 Transformer 論文** - Vaswani 等人，2017（用於大型模型）
+
+---
+
+**還是卡住了？** 開一個 issue 並附上：
+1. 您執行的完整指令
+2. `python test_overfit.py` 的輸出
+3. 前 5 個 epoch 的訓練日誌
+4. 作業系統和 PyTorch 版本
