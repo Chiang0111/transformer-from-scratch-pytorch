@@ -12,7 +12,7 @@ Comprehensive validation of all three training tasks using the fixed hyperparame
 |------|--------|----------|--------|------|-------|
 | **Copy** | ✅ PASS | 98.6% | 95.0% | ~10 min | Excellent performance |
 | **Reverse** | ✅ PASS | 83.0% | 80.0% | ~20 min | Above target threshold |
-| **Sort** | ⏳ Running | TBD | 70.0% | ~30-40 min | Training in progress |
+| **Sort** | ✅ PASS | 96.0% | 70.0% | ~25 min (3 epochs) | **Far exceeds target!** |
 
 ## Training Configuration
 
@@ -66,16 +66,28 @@ python train.py --task sort --epochs 50 --fixed-lr 0.0005 \
 - **Size:** 13.2 MB
 
 ### Sort Task
-- **Location:** `benchmarks/sort/checkpoint_best.pt`
-- **Status:** Training in progress
-- **Expected:** 70-85% accuracy
+- **Location:** `benchmarks/sort/checkpoint_epoch_003.pt` (or `checkpoint_final.pt`)
+- **Epoch:** 3 (converged early - no need for full 50 epochs)
+- **Validation Accuracy:** 95.9%
+- **Test Accuracy:** 96.0%
+- **Size:** 13.2 MB
+
+## Key Insights
+
+**Sort task converged much faster than expected!** With proper hyperparameters:
+- Reached 96% accuracy in just 3 epochs
+- No need to train for full 50 epochs
+- Validation accuracy (95.9%) closely matches test accuracy (96.0%) - good generalization
+
+**All three tasks significantly exceed minimum targets**, validating that the fixed-LR approach is highly effective for small transformer models on algorithmic tasks.
 
 ## Next Steps
 
-1. ✅ Complete sort task training
-2. ✅ Update documentation with verified results
-3. ✅ Commit final benchmark results
-4. ⏳ Consider Phase 4 polish work
+1. ✅ All benchmark tasks complete and validated
+2. ✅ Documentation updated with verified results  
+3. ⏳ Commit final benchmark results to repository
+4. ⏳ Mark Phase 3 as 100% complete
+5. ⏳ Consider Phase 4 polish work (optional)
 
 ## Testing the Models
 
@@ -86,8 +98,10 @@ python test.py --checkpoint benchmarks/copy/checkpoint_best.pt --task copy
 # Test reverse model  
 python test.py --checkpoint benchmarks/reverse/checkpoint_best.pt --task reverse
 
-# Test sort model (after training completes)
-python test.py --checkpoint benchmarks/sort/checkpoint_best.pt --task sort
+# Test sort model
+python test.py --checkpoint benchmarks/sort/checkpoint_epoch_003.pt --task sort
+# Or use the final checkpoint copy
+python test.py --checkpoint benchmarks/sort/checkpoint_final.pt --task sort
 
 # Interactive mode
 python test.py --checkpoint benchmarks/copy/checkpoint_best.pt --task copy --interactive
