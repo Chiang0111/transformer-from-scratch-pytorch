@@ -409,4 +409,4 @@ If you found this helpful, please give it a star! It helps others discover this 
 
 ---
 
-**Built with 🧠 to make transformers accessible to everyone!**
+**Built to make transformers accessible to everyone through comprehensive documentation and clean code.**
