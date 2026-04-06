@@ -394,22 +394,4 @@ MIT License - 歡迎用於學習和作品集！
 
 ---
 
-## ⭐ 表達支持
-
-如果你覺得這個專案有幫助，請給它一個星星！這能幫助其他人發現這個資源。
-
-**分享給：**
-- 學習 Transformer 的 ML 學生
-- 準備 AI 職位的工程師
-- 任何從零開始建構 Transformer 的人
-
----
-
-## 📬 聯絡
-
-- **問題：** [GitHub Issues](https://github.com/Chiang0111/transformer-from-scratch-pytorch/issues)
-- **討論：** [GitHub Discussions](https://github.com/Chiang0111/transformer-from-scratch-pytorch/discussions)
-
----
-
 **致力於透過完整的文件與簡潔的程式碼，讓每個人都能理解 Transformer。**
