@@ -1,6 +1,9 @@
-# Benchmark artifacts
-benchmarks/
+# Training logs (but keep benchmark checkpoints)
 *.log
+
+# Uncomment to ignore all benchmarks (if you don't want to commit trained models):
+# benchmarks/
+# benchmark_results/
 
 # Checkpoints (except for release checkpoints)
 checkpoints/
@@ -32,3 +35,10 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+
+# Documentation review (internal)
+DOCUMENTATION_REVIEW.md
+OPEN_SOURCE_CHECKLIST.md
+
+# Benchmark results (optional - remove this line if you want to commit benchmarks)
+benchmark_results/
