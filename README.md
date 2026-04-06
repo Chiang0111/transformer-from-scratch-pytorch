@@ -1,412 +1,415 @@
-# Transformer from Scratch (PyTorch)
+# Transformer 從零開始 (PyTorch)
 
-[![Tests](https://img.shields.io/badge/tests-80%20passing-brightgreen)](tests/)
+[![測試](https://img.shields.io/badge/tests-80%20passing-brightgreen)](tests/)
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![授權](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-orange)](https://pytorch.org/)
 
-[English](README.md) | [中文](https://github.com/Chiang0111/transformer-from-scratch-pytorch/tree/zh-CN)
+[English](https://github.com/Chiang0111/transformer-from-scratch-pytorch) | [繁體中文](README.md)
 
-A **production-ready** PyTorch implementation of the Transformer architecture from ["Attention Is All You Need"](https://arxiv.org/abs/1706.03762), with **2,500+ lines of educational comments** that serve as a complete learning guide.
-
----
-
-## 🌟 What Makes This Special
-
-Unlike typical implementations, **every line of code is extensively documented** with:
-- 📚 **Why it's needed** - Understand the motivation behind each component
-- 🔍 **How it works** - Step-by-step explanations with concrete examples
-- 💡 **Intuitive analogies** - Library analogy for Attention, clock analogy for positional encoding
-- 📊 **Visual diagrams** - ASCII art showing data flow and transformations
-- 🎯 **Real examples** - "I love eating apples" traced through entire architecture
-
-**The code itself is the tutorial!** Read the source files to learn Transformers deeply.
-
-### ✨ Why This Repository Exists
-
-This project bridges the gap between understanding transformers conceptually and implementing them professionally:
-
-- ✅ **Deep understanding** - Built from scratch, not just using `transformers` library
-- ✅ **Production practices** - Modular code, type hints, unit tests, proper documentation
-- ✅ **Clean architecture** - Each component is isolated, tested, and reusable
-- ✅ **Educational excellence** - 2,500+ lines of explanatory comments (more than the code!)
-- ✅ **Verified results** - Validated on 3 tasks (98.6%, 83%, 96% accuracy)
-- ✅ **Portfolio-ready** - Shows AI engineering skills, not just tutorial following
-
-**Target audience:** Self-taught ML practitioners preparing for AI Engineer roles who need to demonstrate strong fundamentals and production coding skills.
+基於論文 ["Attention Is All You Need"](https://arxiv.org/abs/1706.03762) 的**生產級** PyTorch Transformer 架構實作，包含 **2,500+ 行教學註解**，作為完整的學習指南。
 
 ---
 
-## 📁 Repository Structure
+## 🌟 本專案的獨特之處
+
+與一般實作不同，**每一行程式碼都有詳細的文件說明**，包含：
+- 📚 **為什麼需要** - 理解每個元件背後的動機
+- 🔍 **如何運作** - 搭配具體範例的逐步解釋
+- 💡 **直覺比喻** - 用圖書館比喻 Attention、用時鐘比喻位置編碼
+- 📊 **視覺化圖表** - ASCII 圖表展示資料流與轉換過程
+- 🎯 **實際範例** - 「我愛吃蘋果」完整追蹤整個架構
+
+**程式碼本身就是教學！** 閱讀原始碼檔案即可深入學習 Transformer。
+
+### ✨ 為什麼要建立這個專案
+
+這個專案連接了「理解 Transformer 概念」與「專業實作」之間的橋樑：
+
+- ✅ **深度理解** - 從零實作，而不只是使用 `transformers` 函式庫
+- ✅ **生產實務** - 模組化程式碼、型別提示、單元測試、完整文件
+- ✅ **簡潔架構** - 每個元件都是獨立、可測試、可重用的
+- ✅ **教學卓越** - 2,500+ 行解釋註解（比程式碼本身還多！）
+- ✅ **驗證結果** - 在 3 個任務上驗證（98.6%、83%、96% 準確率）
+- ✅ **作品集就緒** - 展示 AI 工程技能，而不只是跟著教學做
+
+**目標讀者：** 自學 ML 並準備進入 AI 工程師職位的實務工作者，需要展現紮實基礎與生產級程式碼能力。
+
+---
+
+## 📁 專案結構
 
 ```
 transformer-from-scratch-pytorch/
 │
-├── README.md                       ⭐ You are here
-├── LICENSE                         📜 MIT License
-├── CONTRIBUTING.md                 🤝 Contribution guidelines
-├── requirements.txt                📦 Dependencies
+├── README.md                       ⭐ 你在這裡
+├── LICENSE                         📜 MIT 授權
+├── CONTRIBUTING.md                 🤝 貢獻指南
+├── requirements.txt                📦 相依套件
 │
-├── transformer/                    🧠 Core Implementation (2,500+ comment lines)
-│   ├── __init__.py                    Public API
-│   ├── attention.py                   Scaled dot-product & multi-head attention
-│   ├── positional_encoding.py         Sin/cos positional embeddings
-│   ├── feedforward.py                 Position-wise feed-forward network
-│   ├── encoder.py                     Transformer encoder layers
-│   ├── decoder.py                     Transformer decoder layers (with masking)
-│   └── transformer.py                 ⭐ Complete Transformer model
+├── transformer/                    🧠 核心實作（2,500+ 行註解）
+│   ├── __init__.py                    公開 API
+│   ├── attention.py                   縮放點積注意力與多頭注意力
+│   ├── positional_encoding.py         正弦/餘弦位置編碼
+│   ├── feedforward.py                 位置前饋網路
+│   ├── encoder.py                     Transformer 編碼器層
+│   ├── decoder.py                     Transformer 解碼器層（含遮罩）
+│   └── transformer.py                 ⭐ 完整 Transformer 模型
 │
-├── tests/                          ✅ Unit Tests (80 tests, all passing)
-│   ├── test_attention.py              Test attention mechanisms
-│   ├── test_positional_encoding.py    Test positional encoding
-│   ├── test_feedforward.py            Test FFN layers
-│   ├── test_encoder.py                Test encoder
-│   ├── test_decoder.py                Test decoder
-│   ├── test_transformer.py            ⭐ Complete model tests
-│   └── test_training.py               Training pipeline tests
+├── tests/                          ✅ 單元測試（80 個測試，全部通過）
+│   ├── test_attention.py              測試注意力機制
+│   ├── test_positional_encoding.py    測試位置編碼
+│   ├── test_feedforward.py            測試前饋網路層
+│   ├── test_encoder.py                測試編碼器
+│   ├── test_decoder.py                測試解碼器
+│   ├── test_transformer.py            ⭐ 完整模型測試
+│   └── test_training.py               訓練流程測試
 │
-├── scripts/                        🚀 Training & Evaluation
-│   ├── train.py                       Main training script
-│   ├── test.py                        Model evaluation
-│   ├── demo.py                        Interactive demo
-│   └── benchmark.py                   Automated benchmarking
+├── scripts/                        🚀 訓練與評估
+│   ├── train.py                       主要訓練腳本
+│   ├── test.py                        模型評估
+│   ├── demo.py                        互動式示範
+│   └── benchmark.py                   自動化基準測試
 │
-├── examples/                       💡 Usage Examples & Debugging
-│   ├── basic_usage.py                 ⭐ Start here! Simple example
-│   ├── debug_data.py                  Inspect dataset
-│   ├── debug_gradients.py             Check gradient flow
-│   ├── test_overfit.py                Verify model can overfit
-│   └── ...                            Other debugging tools
+├── examples/                       💡 使用範例與除錯
+│   ├── basic_usage.py                 ⭐ 從這裡開始！簡單範例
+│   ├── debug_data.py                  檢查資料集
+│   ├── debug_gradients.py             檢查梯度流
+│   ├── test_overfit.py                驗證模型可以過擬合
+│   └── ...                            其他除錯工具
 │
-├── docs/                           📚 Documentation
-│   ├── TRAINING.md                    Complete training guide
-│   ├── TROUBLESHOOTING.md             Debug guide
-│   ├── RESULTS.md                     Benchmark results
-│   ├── VALIDATION.md                  Testing methodology
-│   └── PLAN.md                        Development roadmap
+├── docs/                           📚 文件
+│   ├── TRAINING.md                    完整訓練指南
+│   ├── TROUBLESHOOTING.md             除錯指南
+│   ├── RESULTS.md                     基準測試結果
+│   ├── VALIDATION.md                  測試方法論
+│   └── PLAN.md                        開發路線圖
 │
-├── datasets.py                     📊 Training Datasets
-│   ├── SequenceCopyDataset            Copy sequences (easiest)
-│   ├── SequenceReverseDataset         Reverse sequences (medium)
-│   └── SequenceSortDataset            Sort sequences (hard)
+├── datasets.py                     📊 訓練資料集
+│   ├── SequenceCopyDataset            複製序列（最簡單）
+│   ├── SequenceReverseDataset         反轉序列（中等）
+│   └── SequenceSortDataset            排序序列（困難）
 │
-├── utils.py                        🛠️ Training Utilities
-│   ├── LabelSmoothingLoss             Label smoothing (for translation)
-│   ├── TransformerLRScheduler         Learning rate schedule
-│   ├── create_masks()                 Padding & causal masks
-│   ├── TrainingMetrics                Track accuracy/loss
-│   └── save/load_checkpoint()         Checkpoint management
+├── utils.py                        🛠️ 訓練工具
+│   ├── LabelSmoothingLoss             標籤平滑（用於翻譯）
+│   ├── TransformerLRScheduler         學習率排程
+│   ├── create_masks()                 填充與因果遮罩
+│   ├── TrainingMetrics                追蹤準確率/損失
+│   └── save/load_checkpoint()         檢查點管理
 │
-├── benchmarks/                     🏆 Trained Model Checkpoints
-│   ├── copy/                          98.6% accuracy (validated)
-│   ├── reverse/                       83.0% accuracy (validated)
-│   └── sort/                          96.0% accuracy (validated)
+├── benchmarks/                     🏆 訓練好的模型檢查點
+│   ├── copy/                          98.6% 準確率（已驗證）
+│   ├── reverse/                       83.0% 準確率（已驗證）
+│   └── sort/                          96.0% 準確率（已驗證）
 │
-└── checkpoints/                    💾 Your Training Checkpoints
-    └── .gitkeep                       (Directory for your experiments)
+└── checkpoints/                    💾 你的訓練檢查點
+    └── .gitkeep                       （實驗用目錄）
 ```
 
-### 📂 Key Files to Explore
+### 📂 重點檔案探索
 
-| File | What It Does | Start Here? |
-|------|--------------|-------------|
-| `examples/basic_usage.py` | Simple usage example | ✅ **YES** |
-| `transformer/attention.py` | Core attention mechanism | ✅ **YES** |
-| `transformer/transformer.py` | Complete model | After understanding parts |
-| `scripts/train.py` | Train your own model | After reading docs |
-| `docs/TRAINING.md` | Complete training guide | Before training |
-| `tests/test_transformer.py` | See how everything works | To understand testing |
+| 檔案 | 功能 | 從這裡開始？ |
+|------|------|-------------|
+| `examples/basic_usage.py` | 簡單使用範例 | ✅ **是** |
+| `transformer/attention.py` | 核心注意力機制 | ✅ **是** |
+| `transformer/transformer.py` | 完整模型 | 理解各部分後 |
+| `scripts/train.py` | 訓練你自己的模型 | 閱讀文件後 |
+| `docs/TRAINING.md` | 完整訓練指南 | 訓練前 |
+| `tests/test_transformer.py` | 看所有東西如何運作 | 理解測試 |
 
 ---
 
-## 🚀 Quick Start
+## 🚀 快速開始
 
-### Installation
+### 安裝
 
 ```bash
-# Clone the repository
+# 複製專案
 git clone https://github.com/Chiang0111/transformer-from-scratch-pytorch.git
 cd transformer-from-scratch-pytorch
 
-# Install dependencies
+# 切換到中文分支
+git checkout zh-CN
+
+# 安裝相依套件
 pip install -r requirements.txt
 
-# Run tests to verify installation
+# 執行測試驗證安裝
 pytest tests/ -v
 ```
 
-**Output:**
+**輸出：**
 ```
 ========================= 80 passed in 12.34s =========================
 ```
 
-### Run a Basic Example
+### 執行基本範例
 
 ```bash
 python examples/basic_usage.py
 ```
 
-This shows how to:
-1. Create a transformer model
-2. Prepare input data
-3. Run forward pass (training mode)
-4. Generate sequences (inference mode)
+這會展示如何：
+1. 建立 transformer 模型
+2. 準備輸入資料
+3. 執行前向傳播（訓練模式）
+4. 生成序列（推論模式）
 
-### Train Your First Model
+### 訓練你的第一個模型
 
 ```bash
-# Copy task (easiest, ~10 minutes on CPU)
+# 複製任務（最簡單，CPU 上約 10 分鐘）
 python scripts/train.py --task copy --epochs 20 \
     --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
 ```
 
-**Expected output:**
+**預期輸出：**
 ```
 Epoch 20/20: Val Seq Acc: 98.6%
-✅ Test Set Results: 98.6% accuracy
+✅ 測試集結果：98.6% 準確率
 ```
 
-See [`docs/TRAINING.md`](docs/TRAINING.md) for complete training guide.
+參見 [`docs/TRAINING.md`](docs/TRAINING.md) 取得完整訓練指南。
 
 ---
 
-## 📖 Learning Path
+## 📖 學習路徑
 
-### 1. Start with Examples (15 minutes)
+### 1. 從範例開始（15 分鐘）
 
 ```bash
-# Understand basic usage
+# 理解基本用法
 python examples/basic_usage.py
 
-# See how data looks
+# 看資料長什麼樣子
 python examples/debug_data.py
 ```
 
-### 2. Read the Core Code (1-2 hours)
+### 2. 閱讀核心程式碼（1-2 小時）
 
-**Recommended reading order:**
+**建議閱讀順序：**
 
-1. **`transformer/attention.py`** (Start here!)
-   - Understand Q, K, V with library analogy
-   - Learn why scaling is crucial (√d_k explained)
-   - See how multi-head attention works
+1. **`transformer/attention.py`**（從這裡開始！）
+   - 用圖書館比喻理解 Q、K、V
+   - 學習為什麼縮放很重要（√d_k 的解釋）
+   - 看多頭注意力如何運作
 
 2. **`transformer/positional_encoding.py`**
-   - Learn why position matters
-   - Understand sin/cos encoding with clock analogy
+   - 學習為什麼位置很重要
+   - 用時鐘比喻理解 sin/cos 編碼
 
 3. **`transformer/feedforward.py`**
-   - See why FFN is needed after attention
-   - Understand expand→transform→compress pattern
+   - 看為什麼注意力之後需要 FFN
+   - 理解展開→轉換→壓縮模式
 
 4. **`transformer/encoder.py`**
-   - See how all components integrate
-   - Trace example "I love eating apples" through encoder
+   - 看所有元件如何整合
+   - 追蹤範例「我愛吃蘋果」通過編碼器
 
 5. **`transformer/decoder.py`**
-   - Learn masked self-attention (causal masking)
-   - Understand cross-attention to encoder memory
+   - 學習遮罩自注意力（因果遮罩）
+   - 理解到編碼器記憶的交叉注意力
 
-6. **`transformer/transformer.py`** (⭐ The complete picture)
-   - Integration of all components
-   - Training vs inference modes
-   - End-to-end data flow
+6. **`transformer/transformer.py`**（⭐ 完整圖像）
+   - 所有元件的整合
+   - 訓練 vs 推論模式
+   - 端到端資料流
 
-### 3. Train Models (30-60 minutes)
+### 3. 訓練模型（30-60 分鐘）
 
 ```bash
-# Copy task (easiest)
+# 複製任務（最簡單）
 python scripts/train.py --task copy --epochs 20 --fixed-lr 0.001 \
     --label-smoothing 0.0 --dropout 0.0
 
-# Reverse task (medium)
+# 反轉任務（中等）
 python scripts/train.py --task reverse --epochs 30 --fixed-lr 0.001 \
     --label-smoothing 0.0 --dropout 0.0
 
-# Sort task (hardest)
+# 排序任務（最困難）
 python scripts/train.py --task sort --epochs 10 --fixed-lr 0.0005 \
     --label-smoothing 0.0 --dropout 0.0
 ```
 
-### 4. Test Trained Models
+### 4. 測試訓練好的模型
 
 ```bash
-# Evaluate on test set
+# 在測試集上評估
 python scripts/test.py --checkpoint benchmarks/copy/checkpoint_best.pt --task copy
 
-# Interactive mode - try your own sequences!
+# 互動模式 - 試試你自己的序列！
 python scripts/test.py --checkpoint benchmarks/copy/checkpoint_best.pt \
     --task copy --interactive
 ```
 
 ---
 
-## 📊 Validated Results
+## 📊 驗證結果
 
-All three tasks **significantly exceed** their minimum targets:
+所有三個任務都**顯著超越**最低目標：
 
-| Task | Test Accuracy | Target | Training Time | Status |
-|------|---------------|--------|---------------|--------|
-| **Copy** | 98.6% | 95.0% | ~10 min | ✅ PASS |
-| **Reverse** | 83.0% | 80.0% | ~20 min | ✅ PASS |
-| **Sort** | 96.0% | 70.0% | ~25 min | ✅ PASS |
+| 任務 | 測試準確率 | 目標 | 訓練時間 | 狀態 |
+|------|-----------|------|---------|------|
+| **複製** | 98.6% | 95.0% | ~10 分鐘 | ✅ 通過 |
+| **反轉** | 83.0% | 80.0% | ~20 分鐘 | ✅ 通過 |
+| **排序** | 96.0% | 70.0% | ~25 分鐘 | ✅ 通過 |
 
-**Key Insights:**
-- All results are on **held-out test sets** (never seen during training)
-- Fixed learning rate approach works better than Transformer schedule for small models
-- Models learn algorithmic reasoning, not just memorization
-- Sort task converged in just 3 epochs (not 50!)
+**關鍵見解：**
+- 所有結果都在**保留測試集**上（訓練時從未見過）
+- 固定學習率方法對小模型比 Transformer 排程更有效
+- 模型學習演算法推理，而不只是記憶
+- 排序任務在 3 個 epoch 內就收斂了（不是 50 個！）
 
-See [`docs/RESULTS.md`](docs/RESULTS.md) for detailed analysis.
+參見 [`docs/RESULTS.md`](docs/RESULTS.md) 取得詳細分析。
 
 ---
 
-## 💻 Usage Example
+## 💻 使用範例
 
 ```python
 from transformer import create_transformer
 import torch
 
-# Create a small transformer (CPU-friendly)
+# 建立小型 transformer（CPU 友善）
 model = create_transformer(
-    src_vocab_size=10000,  # English vocabulary
-    tgt_vocab_size=8000,   # Chinese vocabulary
-    d_model=256,           # Smaller than paper's 512
-    num_heads=4,           # Fewer heads for CPU
-    num_layers=2,          # Shallower for faster training
-    d_ff=1024              # Smaller FFN
+    src_vocab_size=10000,  # 英文詞彙表
+    tgt_vocab_size=8000,   # 中文詞彙表
+    d_model=256,           # 比論文的 512 小
+    num_heads=4,           # 較少的頭數適合 CPU
+    num_layers=2,          # 較淺以便更快訓練
+    d_ff=1024              # 較小的 FFN
 )
 
-print(f"Model parameters: {model.count_parameters():,}")
-# Output: Model parameters: 16,234,528
+print(f"模型參數數量：{model.count_parameters():,}")
+# 輸出：模型參數數量：16,234,528
 
-# Training mode: teacher forcing
+# 訓練模式：教師強迫
 src = torch.randint(0, 10000, (2, 10))  # batch=2, src_len=10
 tgt = torch.randint(0, 8000, (2, 8))    # batch=2, tgt_len=8
 logits = model(src, tgt)                # (2, 8, 8000)
 
-# Inference mode: autoregressive generation
+# 推論模式：自回歸生成
 model.eval()
 generated = model.generate(src, max_len=20, start_token=1, end_token=2)
-print(f"Generated: {generated.shape}")  # (2, <=20)
+print(f"生成結果：{generated.shape}")  # (2, <=20)
 ```
 
 ---
 
-## 🧪 Testing
+## 🧪 測試
 
 ```bash
-# Run all 80 tests
+# 執行所有 80 個測試
 pytest tests/ -v
 
-# Run specific test file
+# 執行特定測試檔案
 pytest tests/test_attention.py -v
 
-# Run with coverage
+# 執行涵蓋率測試
 pytest tests/ --cov=transformer --cov-report=html
 ```
 
-**Test coverage:**
-- ✅ 80 unit tests covering all components
-- ✅ Integration tests for end-to-end pipeline
-- ✅ Smoke tests, quality tests, robustness tests
-- ✅ All tests pass on CPU (no GPU required)
+**測試涵蓋率：**
+- ✅ 80 個單元測試涵蓋所有元件
+- ✅ 端到端流程的整合測試
+- ✅ 冒煙測試、品質測試、穩健性測試
+- ✅ 所有測試在 CPU 上通過（不需要 GPU）
 
 ---
 
-## 📚 Documentation
+## 📚 文件
 
-| Document | Description |
-|----------|-------------|
-| [`docs/TRAINING.md`](docs/TRAINING.md) | Complete training guide with all hyperparameters |
-| [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Debug guide with decision trees |
-| [`docs/RESULTS.md`](docs/RESULTS.md) | Detailed benchmark results and insights |
-| [`docs/VALIDATION.md`](docs/VALIDATION.md) | Testing methodology and ML best practices |
-| [`docs/PLAN.md`](docs/PLAN.md) | Development roadmap and project status |
-
----
-
-## 🎯 How This Differs from Other Transformer Tutorials
-
-| Most Tutorials | This Repository |
-|----------------|-----------------|
-| Single Jupyter notebook | Modular Python package |
-| No tests | 80 unit tests, all passing |
-| Minimal documentation | **2,500+ lines of educational comments** |
-| Brief inline comments | Complete learning guide in code |
-| "Just make it work" | Production-ready code structure |
-| One messy commit | Thoughtful git history |
-| No training example | **Complete training pipeline** |
-| GPU required | CPU-friendly (small models) |
-| Code only | Code + analogies + visual diagrams |
-| Copy-paste paper hyperparameters | **Tuned for small models** (actually works!) |
-| No validation | **Verified on 3 tasks with test sets** |
-
-**Philosophy:** If you can't explain it in clean, tested code with comprehensive documentation, you don't understand it well enough.
+| 文件 | 說明 |
+|------|------|
+| [`docs/TRAINING.md`](docs/TRAINING.md) | 包含所有超參數的完整訓練指南 |
+| [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | 含決策樹的除錯指南 |
+| [`docs/RESULTS.md`](docs/RESULTS.md) | 詳細的基準測試結果與見解 |
+| [`docs/VALIDATION.md`](docs/VALIDATION.md) | 測試方法論與 ML 最佳實踐 |
+| [`docs/PLAN.md`](docs/PLAN.md) | 開發路線圖與專案狀態 |
 
 ---
 
-## 🤝 Contributing
+## 🎯 與其他 Transformer 教學的差異
 
-Contributions are welcome! This is an educational project, so clarity and comprehensive comments are valued over performance optimizations.
+| 一般教學 | 這個專案 |
+|---------|---------|
+| 單一 Jupyter notebook | 模組化 Python 套件 |
+| 沒有測試 | 80 個單元測試，全部通過 |
+| 最少文件 | **2,500+ 行教學註解** |
+| 簡短的行內註解 | 程式碼內含完整學習指南 |
+| 「只要能跑就好」 | 生產級程式碼架構 |
+| 一個凌亂的 commit | 有思考的 git 歷史紀錄與詳細 commit |
+| 沒有訓練範例 | **完整訓練流程** |
+| 需要 GPU | CPU 友善（小模型）|
+| 只有程式碼 | 程式碼 + 比喻 + 視覺化圖表 |
+| 照抄論文超參數 | **針對小模型調整**（實際可用！）|
+| 沒有驗證 | **在 3 個任務上用測試集驗證** |
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines.
-
-**Ways to contribute:**
-- 🐛 Report bugs or issues
-- 📝 Improve documentation or comments
-- ✨ Add new training tasks
-- 🌍 Translate documentation
-- 🎨 Add visualization tools
-- 📚 Create tutorials or examples
-
----
-
-## 📜 License
-
-MIT License - feel free to use for learning and portfolios!
-
-See [`LICENSE`](LICENSE) for details.
+**理念：** 如果你無法用簡潔且經過測試、並有完整文件的程式碼來解釋它，代表你還不夠理解它。
 
 ---
 
-## 🙏 Acknowledgments
+## 🤝 貢獻
 
-- Original paper: ["Attention Is All You Need"](https://arxiv.org/abs/1706.03762) by Vaswani et al.
-- Inspired by [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) by Jay Alammar
-- Built with ❤️ for the ML learning community
+歡迎貢獻！這是一個教學專案，所以清晰和全面的註解比效能優化更重要。
 
----
+參見 [`CONTRIBUTING.md`](CONTRIBUTING.md) 取得指南。
 
-## 🔗 Resources
-
-### Learn More
-- 📖 [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) - Visual explanations
-- 📄 [Original Paper](https://arxiv.org/abs/1706.03762) - "Attention Is All You Need"
-- 🎓 [Annotated Transformer](http://nlp.seas.harvard.edu/annotated-transformer/) - Another great resource
-
-### Related Projects
-- [PyTorch Transformers](https://github.com/huggingface/transformers) - Production library (Hugging Face)
-- [Fairseq](https://github.com/facebookresearch/fairseq) - Facebook's sequence modeling toolkit
+**貢獻方式：**
+- 🐛 回報錯誤或問題
+- 📝 改進文件或註解
+- ✨ 新增訓練任務
+- 🌍 翻譯文件
+- 🎨 新增視覺化工具
+- 📚 建立教學或範例
 
 ---
 
-## ⭐ Show Your Support
+## 📜 授權
 
-If you found this helpful, please give it a star! It helps others discover this resource.
+MIT License - 歡迎用於學習和作品集！
 
-**Share with:**
-- ML students learning transformers
-- Engineers preparing for AI roles
-- Anyone building transformers from scratch
+參見 [`LICENSE`](LICENSE) 取得詳細資訊。
 
 ---
 
-## 📬 Contact
+## 🙏 致謝
 
-- **Issues:** [GitHub Issues](https://github.com/Chiang0111/transformer-from-scratch-pytorch/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/Chiang0111/transformer-from-scratch-pytorch/discussions)
+- 原始論文：Vaswani 等人的 ["Attention Is All You Need"](https://arxiv.org/abs/1706.03762)
+- 靈感來源：Jay Alammar 的 [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/)
+- 為 ML 學習社群用 ❤️ 建立
 
 ---
 
-**Built with 🧠 to make transformers accessible to everyone!**
+## 🔗 資源
+
+### 學習更多
+- 📖 [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) - 視覺化解釋
+- 📄 [原始論文](https://arxiv.org/abs/1706.03762) - "Attention Is All You Need"
+- 🎓 [Annotated Transformer](http://nlp.seas.harvard.edu/annotated-transformer/) - 另一個很棒的資源
+
+### 相關專案
+- [PyTorch Transformers](https://github.com/huggingface/transformers) - 生產級函式庫（Hugging Face）
+- [Fairseq](https://github.com/facebookresearch/fairseq) - Facebook 的序列建模工具包
+
+---
+
+## ⭐ 表達支持
+
+如果你覺得這個專案有幫助，請給它一個星星！這能幫助其他人發現這個資源。
+
+**分享給：**
+- 學習 Transformer 的 ML 學生
+- 準備 AI 職位的工程師
+- 任何從零開始建構 Transformer 的人
+
+---
+
+## 📬 聯絡
+
+- **問題：** [GitHub Issues](https://github.com/Chiang0111/transformer-from-scratch-pytorch/issues)
+- **討論：** [GitHub Discussions](https://github.com/Chiang0111/transformer-from-scratch-pytorch/discussions)
+
+---
+
+**用 🧠 建構，讓 Transformer 對每個人都易於理解！**
