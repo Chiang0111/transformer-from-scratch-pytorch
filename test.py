@@ -186,16 +186,15 @@ def main():
 
     # Test on dataset
     print("📊 Testing on dataset...")
-    _, test_loader, dataset_info = create_dataloader(
+    # Use train_split=0, val_split=0 so all data goes to test set
+    _, _, test_loader, dataset_info = create_dataloader(
         dataset_type=args.task,
         batch_size=args.batch_size,
         num_samples=args.num_samples,
         vocab_size=model_config['vocab_size'],
-        train_split=0.0  # Use all data for testing
+        train_split=0.0,  # No training data
+        val_split=0.0     # No validation data (all goes to test)
     )
-
-    # Change to use test samples
-    test_loader.dataset.dataset.sequences = test_loader.dataset.dataset.sequences[:args.num_samples]
 
     metrics = test_model(model, test_loader, device, dataset_info['pad_token'])
 

@@ -377,7 +377,7 @@ def save_checkpoint(
         'epoch': epoch,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
-        'scheduler_step': scheduler.step_num,
+        'scheduler_step': scheduler.step_num if scheduler is not None else 0,
         'metrics': metrics
     }
 
@@ -436,7 +436,7 @@ def save_training_config(config: Dict, save_dir: str = 'checkpoints'):
         save_dir: Directory to save config
     """
     save_dir = Path(save_dir)
-    save_dir.mkdir(exist_ok=True)
+    save_dir.mkdir(exist_ok=True, parents=True)
 
     config_path = save_dir / 'config.json'
 

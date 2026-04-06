@@ -1,36 +1,34 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-.venv/
-ENV/
+# Benchmark artifacts
+benchmarks/
+*.log
 
-# PyTorch
-*.pth
-*.pt
+# Checkpoints (except for release checkpoints)
 checkpoints/
 
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb_checkpoints
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
 
-# IDE
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Data
-data/
-datasets/
-*.csv
-*.txt
-!requirements.txt
+*~
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak

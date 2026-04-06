@@ -6,7 +6,7 @@ from datasets import create_dataloader
 from utils import LabelSmoothingLoss, create_padding_mask, create_target_mask
 
 # Create small dataset
-train_loader, _, dataset_info = create_dataloader(
+train_loader, _, _, dataset_info = create_dataloader(
     dataset_type='copy',
     batch_size=4,
     num_samples=20,

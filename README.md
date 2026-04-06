@@ -40,6 +40,7 @@ This project bridges the gap between understanding transformers conceptually and
 | No training example | **Complete training pipeline** ✅ |
 | GPU required | CPU-friendly (small model) |
 | Code only | Code + intuitive analogies + visual diagrams |
+| Copy-paste paper hyperparameters | **Tuned for small models** (actually works!) |
 
 **Philosophy:** If you can't explain it in clean, tested code with comprehensive documentation, you don't understand it well enough.
 
@@ -127,20 +128,20 @@ pytest tests/ -v  # 80 tests should pass
 
 ### Train a Model
 ```bash
-# ⚠️ CRITICAL: Must use BOTH --lr-factor 10.0 AND --label-smoothing 0.0
-# See TRAINING.md for details
+# ✅ Use fixed learning rate (NOT the Transformer schedule!)
 
-# Train on copy task (easiest, ~15 minutes on CPU)
-python train.py --task copy --epochs 30 --lr-factor 10.0 --label-smoothing 0.0
+# Train on copy task (easiest, ~10 minutes on CPU, 95-99% accuracy)
+python train.py --task copy --epochs 20 --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
 
-# Train on reverse task (medium difficulty)
-python train.py --task reverse --epochs 40 --lr-factor 10.0 --label-smoothing 0.0
+# Train on reverse task (medium difficulty, ~20 minutes, 85-95% accuracy)
+python train.py --task reverse --epochs 30 --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
 
-# Train on sort task (hardest)
-python train.py --task sort --epochs 60 --lr-factor 10.0 --label-smoothing 0.0
+# Train on sort task (hardest, ~30 minutes, 70-85% accuracy)
+python train.py --task sort --epochs 50 --fixed-lr 0.0005 --label-smoothing 0.0 --dropout 0.0
 ```
 
-**📖 See [TRAINING.md](TRAINING.md) for complete training guide**
+**📖 See [TRAINING.md](TRAINING.md) for complete training guide**  
+**🐛 Model not learning? See [TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ### Use the Model
 ```python

@@ -1,5 +1,21 @@
 # Training Issues & Solutions
 
+## ⚠️ CRITICAL UPDATE
+
+**The root cause was identified:** The **Transformer LR schedule is incompatible with small models on simple tasks**.
+
+### Real Solution (TESTED & VERIFIED ✅)
+```bash
+python train.py --task copy --epochs 10 --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
+```
+
+Results in just 3 epochs:
+- **Epoch 1:** 66% token accuracy
+- **Epoch 2:** 96% token accuracy  
+- **Epoch 3:** 98% token accuracy
+
+---
+
 ## Issue Summary
 
 The initial 30-epoch training run completed but **the model did not learn** (stuck at random guessing performance).
@@ -18,7 +34,38 @@ Final Metrics:
 
 The model generated END_TOKEN (token 2) immediately with 11% probability as the first token, resulting in empty sequences.
 
-### 2. Root Cause Analysis
+### 2. Root Cause Analysis (UPDATED)
+
+**The model architecture is CORRECT** - verified with overfitting test:
+- Model reached loss ≈ 0.0000 and 100% token accuracy
+- Architecture works perfectly!
+
+**The REAL problem is the Transformer LR Schedule:**
+
+The original paper's LR schedule:
+```python
+lr = d_model^(-0.5) * min(step^(-0.5), step * warmup^(-1.5)) * factor
+```
+
+With our settings (d_model=128, warmup=500, factor=10.0):
+- **Step 1:** LR = 0.000079
+- **Step 100:** LR = 0.007906
+- **Step 500 (peak):** LR = 0.039528
+- **Average during Epoch 1:** LR = 0.005613
+
+**Fixed LR that works:** 0.001
+
+The Transformer schedule gives learning rates **5.6x too high on average** and up to **39x too high at peak**! This causes training instability for small models on simple tasks.
+
+### Why the Schedule Fails for Small Models
+
+| Original Paper | This Project |
+|---------------|--------------|
+| d_model=512, 6 layers | d_model=128, 2 layers |
+| Complex task (translation) | Simple task (copy) |
+| Huge dataset (WMT, millions) | Small dataset (10K samples) |
+| Long training (100K+ steps) | Short training (~4K steps) |
+| **Schedule works** ✅ | **Schedule fails** ❌ |
 
 **The model architecture is CORRECT** - I verified this with an overfitting test:
 - Created a test that trains on a single batch (4 sequences)
@@ -60,37 +107,61 @@ All gradients are flowing correctly:
 ✅ Masks are created properly
 ✅ Forward/backward pass works
 
-## Solution
+## Solution ✅
 
-### Corrected Hyperparameters for Small Models
+### Use Fixed Learning Rate (RECOMMENDED)
 
-For `d_model=128, num_layers=2` (small CPU-friendly models):
+For small models (d_model ≤ 256) on simple tasks:
+
+```bash
+# Copy task (should reach 95%+ accuracy in 5-10 epochs)
+python train.py --task copy --epochs 20 \
+  --fixed-lr 0.001 \
+  --label-smoothing 0.0 \
+  --dropout 0.0
+
+# Reverse task
+python train.py --task reverse --epochs 30 \
+  --fixed-lr 0.001 \
+  --label-smoothing 0.0 \
+  --dropout 0.0
+
+# Sort task
+python train.py --task sort --epochs 50 \
+  --fixed-lr 0.0005 \
+  --label-smoothing 0.0 \
+  --dropout 0.0
+```
+
+**Why this works:**
+1. **`--fixed-lr 0.001`**: Simple, stable learning rate
+   - No warmup period needed
+   - No complex schedule
+   - Just works for small models!
+
+2. **`--label-smoothing 0.0`**: Disable label smoothing
+   - Label smoothing hurts performance on algorithmic tasks
+   - Useful for translation, harmful for copy/reverse/sort
+
+3. **`--dropout 0.0`**: Disable dropout for small datasets
+   - 10K samples is too small to need regularization
+   - Dropout can interfere with learning on simple tasks
+
+### Alternative: Transformer Schedule (NOT RECOMMENDED)
+
+If you really want to use the original Transformer schedule (not recommended for small models):
 
 ```bash
 python train.py \
   --task copy \
   --epochs 30 \
-  --lr-factor 10.0 \        # 5x higher than default
-  --warmup-steps 500 \       # Faster warmup
-  --label-smoothing 0.0      # Not needed for simple tasks
+  --lr-factor 0.2 \        # Much lower than before!
+  --warmup-steps 4000 \    # Longer warmup
+  --label-smoothing 0.0 \
+  --dropout 0.1
 ```
 
-**Why these changes:**
-
-1. **`lr-factor 10.0`**: Compensates for small d_model
-   - Transformer LR formula assumes d_model=512
-   - Smaller models need proportionally higher LR
-   - Gives peak_lr ≈ 0.0039 (vs 0.000176 with default)
-
-2. **`warmup-steps 500`**: Faster warmup for small datasets
-   - Default 4000 is for large datasets
-   - Small datasets (5K-10K samples) converge faster
-
-3. **`label-smoothing 0.0`**: **CRITICAL - Must be disabled!**
-   - Label smoothing (default 0.1) distributes probability: 90% correct, 10% across other 19 tokens
-   - Makes it harder to learn correct mappings on simple tasks
-   - Useful for large-vocab tasks (translation) but **KILLS performance** on algorithmic tasks
-   - **Even with correct LR (10.0), training STILL FAILS if label smoothing is 0.1!**
+**Note:** The Transformer schedule was designed for large models and will likely still underperform compared to fixed LR
 
 ### Expected Results with Corrected Hyperparameters
 

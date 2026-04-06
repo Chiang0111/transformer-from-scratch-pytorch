@@ -9,7 +9,7 @@ print("Testing if model can overfit a single batch...")
 print("=" * 60)
 
 # Create tiny dataset
-train_loader, _, dataset_info = create_dataloader(
+train_loader, _, _, dataset_info = create_dataloader(
     dataset_type='copy',
     batch_size=4,
     num_samples=4,  # Just 4 samples

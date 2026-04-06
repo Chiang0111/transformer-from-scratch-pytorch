@@ -1,0 +1,15 @@
+{
+  "timestamp": "20260406_120554",
+  "passed": 1,
+  "failed": 0,
+  "total_time": 437.75506567955017,
+  "results": {
+    "copy": {
+      "status": "passed",
+      "accuracy": 98.6,
+      "target": 85.0,
+      "passed": true,
+      "time": 437.75506567955017
+    }
+  }
+}

@@ -351,29 +351,43 @@ def create_dataloader(
     batch_size: int = 32,
     num_samples: int = 10000,
     vocab_size: int = 20,
-    train_split: float = 0.9
+    train_split: float = 0.8,
+    val_split: float = 0.1
 ) -> Tuple:
     """
-    Create train and validation dataloaders
+    Create train, validation, and test dataloaders
+
+    【Proper ML Practice】
+    Splits data into three sets:
+    - Training (80%): Used to train the model
+    - Validation (10%): Used for early stopping and checkpoint selection
+    - Test (10%): NEVER seen during training - for final evaluation only
+
+    This prevents data leakage where the model indirectly "sees" test data
+    through checkpoint selection based on validation performance.
 
     Args:
         dataset_type: 'copy', 'reverse', or 'sort'
         batch_size: Batch size for training
         num_samples: Total number of samples to generate
         vocab_size: Vocabulary size
-        train_split: Fraction of data for training (rest for validation)
+        train_split: Fraction of data for training (default: 0.8)
+        val_split: Fraction of data for validation (default: 0.1)
+                   (remaining goes to test set)
 
     Returns:
-        train_loader, val_loader, dataset_info
+        train_loader, val_loader, test_loader, dataset_info
 
     Example:
-        train_loader, val_loader, info = create_dataloader('copy', batch_size=32)
+        train_loader, val_loader, test_loader, info = create_dataloader('copy')
 
-        for src, tgt_input, tgt_output in train_loader:
-            # src.shape: (32, max_src_len)
-            # tgt_input.shape: (32, max_tgt_len)
-            # tgt_output.shape: (32, max_tgt_len)
-            ...
+        # Training loop uses train_loader and val_loader
+        for epoch in range(epochs):
+            train(train_loader)
+            validate(val_loader)  # For checkpoint selection
+
+        # Final evaluation uses test_loader (held-out data)
+        test_accuracy = evaluate(test_loader)
     """
     # Select dataset
     if dataset_type == 'copy':
@@ -385,12 +399,13 @@ def create_dataloader(
     else:
         raise ValueError(f"Unknown dataset type: {dataset_type}")
 
-    # Split into train/val
+    # Split into train/val/test (default: 80/10/10)
     train_size = int(train_split * num_samples)
-    val_size = num_samples - train_size
+    val_size = int(val_split * num_samples)
+    test_size = num_samples - train_size - val_size
 
-    train_dataset, val_dataset = torch.utils.data.random_split(
-        dataset, [train_size, val_size]
+    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(
+        dataset, [train_size, val_size, test_size]
     )
 
     # Create dataloaders
@@ -410,6 +425,14 @@ def create_dataloader(
         num_workers=0
     )
 
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=collate_fn,
+        num_workers=0
+    )
+
     # Dataset info for model creation
     dataset_info = {
         'vocab_size': vocab_size,
@@ -418,7 +441,8 @@ def create_dataloader(
         'end_token': dataset.END_TOKEN,
         'task': dataset_type,
         'train_samples': train_size,
-        'val_samples': val_size
+        'val_samples': val_size,
+        'test_samples': test_size
     }
 
-    return train_loader, val_loader, dataset_info
+    return train_loader, val_loader, test_loader, dataset_info
