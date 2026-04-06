@@ -1,234 +1,234 @@
-# Project Status Report
+# 專案狀態報告
 
-**Last Updated:** 2026-04-06  
-**Completion:** ~95%
-
----
-
-## ✅ Phase 3: Complete Model & Training (DONE!)
-
-The PLAN.md marks these as "Remaining Tasks" but they're actually **ALL COMPLETE**:
-
-- [x] ✅ Prepare lightweight dataset → `datasets.py` (copy/reverse/sort tasks)
-- [x] ✅ Implement training loop → `train.py` (label smoothing, LR scheduling, gradient clipping)
-- [x] ✅ Add evaluation metrics → Loss, token acc, seq acc, perplexity
-- [x] ✅ Train small model → Copy: 98.6% test accuracy
-- [x] ✅ Save and load checkpoints → `utils.py` (save_checkpoint, load_checkpoint)
-- [x] ✅ Create training script → `train.py`
-
-**Bonus achievements beyond plan:**
-- ✅ Fixed critical training bug (Transformer LR schedule issue)
-- ✅ Added proper train/val/test splits (80/10/10)
-- ✅ Created benchmark suite (`benchmark.py`)
-- ✅ Created interactive demo (`demo.py`)
-- ✅ Integration tests (`tests/test_training.py`)
-- ✅ Comprehensive troubleshooting docs
+**最後更新：** 2026-04-06  
+**完成度：** ~95%
 
 ---
 
-## ⚠️ Phase 4: Polish (MOSTLY DONE)
+## ✅ 階段 3：完整模型和訓練（完成！）
 
-### Completed Phase 4 Tasks
+PLAN.md 將這些標記為「剩餘任務」，但它們實際上**全部完成**：
 
-#### ✅ Write comprehensive README
-**Status:** EXCELLENT - Far exceeds plan
-- ✅ Motivation and goals clearly stated
-- ✅ "What makes this special" section
-- ✅ Comparison table vs other tutorials
-- ✅ Usage examples with commands
-- ✅ How to train (with actual working commands)
-- ⚠️ Results section exists but needs validation
+- [x] ✅ 準備輕量級資料集 → `datasets.py`（複製/反轉/排序任務）
+- [x] ✅ 實作訓練迴圈 → `train.py`（標籤平滑、學習率排程、梯度裁剪）
+- [x] ✅ 新增評估指標 → 損失、詞元準確率、序列準確率、困惑度
+- [x] ✅ 訓練小型模型 → 複製：98.6% 測試準確率
+- [x] ✅ 儲存和載入檢查點 → `utils.py`（save_checkpoint、load_checkpoint）
+- [x] ✅ 建立訓練腳本 → `train.py`
 
-**What's missing:**
-- Architecture diagram (optional - code has ASCII diagrams)
-
-#### ✅ Comprehensive docstrings  
-**Status:** EXCEPTIONAL - 2,500+ lines of comments
-- Every component extensively documented
-- "Why it's needed" explanations
-- "How it works" with examples
-- Analogies (library, clock)
-- ASCII diagrams
-
-#### ❌ Create Jupyter notebook tutorial
-**Status:** INTENTIONALLY SKIPPED
-- We decided against this (see VALIDATION.md)
-- Created `demo.py` instead (better UX)
-- Jupyter contradicts "production-ready" philosophy
-
-#### ✅ Add examples/
-**Status:** DONE (different approach)
-- `demo.py` - Interactive demo (better than Jupyter)
-- `test.py` - Inference script with interactive mode
-- `benchmark.py` - Validation examples
-- No pretrained model (intentional - educational focus)
+**超出計劃的額外成就：**
+- ✅ 修復關鍵訓練錯誤（Transformer 學習率排程問題）
+- ✅ 新增適當的訓練/驗證/測試分割（80/10/10）
+- ✅ 建立基準測試套件（`benchmark.py`）
+- ✅ 建立互動式示範（`demo.py`）
+- ✅ 整合測試（`tests/test_training.py`）
+- ✅ 全面的疑難排解文件
 
 ---
 
-## 🚨 Remaining Work
+## ⚠️ 階段 4：打磨（大部分完成）
 
-### Critical (Must Do)
+### 已完成的階段 4 任務
 
-#### 1. **Run Full Benchmark** (~45 min)
+#### ✅ 撰寫全面的 README
+**狀態：** 優秀 - 遠超計劃
+- ✅ 動機和目標清楚陳述
+- ✅ 「什麼讓這個專案特別」部分
+- ✅ 與其他教學的比較表
+- ✅ 帶命令的使用範例
+- ✅ 如何訓練（帶實際運作的命令）
+- ⚠️ 結果部分存在但需要驗證
+
+**缺少的：**
+- 架構圖（可選 - 程式碼有 ASCII 圖表）
+
+#### ✅ 全面的 docstrings  
+**狀態：** 卓越 - 2,500+ 行註解
+- 每個元件都有廣泛的文件
+- 「為什麼需要它」解釋
+- 「它如何運作」附帶範例
+- 類比（圖書館、時鐘）
+- ASCII 圖表
+
+#### ❌ 建立 Jupyter notebook 教學
+**狀態：** 刻意跳過
+- 我們決定不做這個（參見 VALIDATION.md）
+- 改為建立 `demo.py`（更好的使用者體驗）
+- Jupyter 與「生產就緒」理念矛盾
+
+#### ✅ 新增 examples/
+**狀態：** 完成（不同方法）
+- `demo.py` - 互動式示範（比 Jupyter 更好）
+- `test.py` - 帶互動模式的推論腳本
+- `benchmark.py` - 驗證範例
+- 無預訓練模型（刻意的 - 教育重點）
+
+---
+
+## 🚨 剩餘工作
+
+### 關鍵（必須做）
+
+#### 1. **執行完整基準測試**（約 45 分鐘）
 ```bash
 python benchmark.py
 ```
 
-**Why:** We've only validated copy task. Need to verify:
-- ✅ Copy: 98.6% (validated)
-- ❓ Reverse: NOT TESTED with fixed-LR
-- ❓ Sort: NOT TESTED with fixed-LR
+**為什麼：** 我們只驗證了複製任務。需要驗證：
+- ✅ 複製：98.6%（已驗證）
+- ❓ 反轉：未使用固定學習率測試
+- ❓ 排序：未使用固定學習率測試
 
-**Risk:** Documentation claims "85-95% on reverse" but we haven't tested it!
+**風險：** 文件聲稱「反轉 85-95%」但我們還沒測試過！
 
-#### 2. **Update PLAN.md**
-Mark Phase 3 as complete, update Phase 4 checklist to reflect reality.
+#### 2. **更新 PLAN.md**
+將階段 3 標記為完成，更新階段 4 檢查清單以反映現實。
 
-#### 3. **Code Review & Cleanup**
-Quick pass through code:
-- [ ] Remove any debug prints
-- [ ] Check for TODO comments
-- [ ] Verify consistent naming
-- [ ] Remove unused imports
-- [ ] Check type hints coverage
+#### 3. **程式碼審查和清理**
+快速檢查程式碼：
+- [ ] 移除任何除錯 print
+- [ ] 檢查 TODO 註解
+- [ ] 驗證一致的命名
+- [ ] 移除未使用的匯入
+- [ ] 檢查型別提示覆蓋率
 
 ---
 
-### Optional (Nice to Have)
+### 可選（很好有）
 
-#### 4. **Add Architecture Diagram**
-Create a simple diagram showing:
+#### 4. **新增架構圖**
+建立簡單的圖表顯示：
 ```
-Input → Encoder → Decoder → Output
+輸入 → Encoder → Decoder → 輸出
 ```
-Could be ASCII art in README or simple image.
+可以是 README 中的 ASCII 藝術或簡單圖片。
 
-#### 5. **Create examples/ Directory**
+#### 5. **建立 examples/ 目錄**
 ```
 examples/
-├── simple_inference.py   # Minimal usage example
-├── pretrained/           # (Optional) Trained checkpoint
-└── README.md             # Example documentation
+├── simple_inference.py   # 最小使用範例
+├── pretrained/           # (可選) 訓練好的檢查點
+└── README.md             # 範例文件
 ```
 
-#### 6. **Set Up CI/CD**
+#### 6. **設定 CI/CD**
 ```yaml
 # .github/workflows/test.yml
 - pytest tests/
 - python benchmark.py --quick
 ```
 
-#### 7. **Add requirements.txt**
+#### 7. **新增 requirements.txt**
 ```
 torch>=2.0.0
 pytest>=7.0.0
 ```
 
-#### 8. **Final Code Refactor**
-- Review for DRY violations
-- Extract common patterns
-- Improve readability
+#### 8. **最終程式碼重構**
+- 審查 DRY 違規
+- 提取常見模式
+- 改善可讀性
 
 ---
 
-## 📊 Completion Breakdown
+## 📊 完成度細分
 
-| Phase | Status | Completion |
-|-------|--------|------------|
-| Phase 1: Foundation | ✅ Done | 100% |
-| Phase 2: Architecture | ✅ Done | 100% |
-| Phase 3: Training | ✅ Done | 100% |
-| Phase 4: Polish | ⚠️ Mostly Done | 85% |
-| **Overall** | **⚠️ Nearly Complete** | **~95%** |
-
----
-
-## 🎯 To Reach 100%
-
-### Minimum Viable (2-3 hours)
-1. Run full benchmark (45 min)
-2. Code cleanup pass (30 min)
-3. Update PLAN.md (15 min)
-4. Add requirements.txt (5 min)
-5. Fix any benchmark failures (1 hour)
-
-### Portfolio-Perfect (5-6 hours)
-1. All minimum viable tasks
-2. Create examples/ directory (1 hour)
-3. Add architecture diagram (30 min)
-4. Set up CI/CD (1 hour)
-5. Final refactor pass (1 hour)
-6. Test everything one more time (30 min)
+| 階段 | 狀態 | 完成度 |
+|------|------|--------|
+| 階段 1：基礎 | ✅ 完成 | 100% |
+| 階段 2：架構 | ✅ 完成 | 100% |
+| 階段 3：訓練 | ✅ 完成 | 100% |
+| 階段 4：打磨 | ⚠️ 大部分完成 | 85% |
+| **總體** | **⚠️ 幾乎完成** | **~95%** |
 
 ---
 
-## 🏆 What Makes This Repo Stand Out
+## 🎯 要達到 100%
 
-Even at 95%, this repo already exceeds most educational Transformer repos:
+### 最小可行（2-3 小時）
+1. 執行完整基準測試（45 分鐘）
+2. 程式碼清理（30 分鐘）
+3. 更新 PLAN.md（15 分鐘）
+4. 新增 requirements.txt（5 分鐘）
+5. 修復任何基準測試失敗（1 小時）
 
-**Unique achievements:**
-1. ✅ **Fixed critical LR schedule bug** - Most repos just copy paper settings
-2. ✅ **Proper ML evaluation** - Most don't have test sets
-3. ✅ **Comprehensive troubleshooting** - Most have zero debugging help
-4. ✅ **Production practices** - Most are messy notebooks
-5. ✅ **2,500+ lines of educational comments** - Most have minimal docs
-6. ✅ **80+ unit tests** - Most have zero tests
-7. ✅ **Automated benchmark suite** - Most have "trust me it works"
-8. ✅ **Complete investigation story** - Most hide their bugs
-
----
-
-## 💡 Recommendation
-
-### For "Good Enough"
-Just do the **Critical** items (2-3 hours):
-- Run benchmark
-- Update PLAN.md
-- Quick cleanup
-- Done! ✅
-
-### For "Portfolio Perfect"
-Do all **Critical + Optional** items (5-6 hours):
-- Everything above
-- Plus examples/, CI/CD, diagram
-- Final polish
-- True showcase piece! ⭐
+### 作品集完美（5-6 小時）
+1. 所有最小可行任務
+2. 建立 examples/ 目錄（1 小時）
+3. 新增架構圖（30 分鐘）
+4. 設定 CI/CD（1 小時）
+5. 最終重構（1 小時）
+6. 再測試一次所有內容（30 分鐘）
 
 ---
 
-## 📝 Notes
+## 🏆 是什麼讓這個儲存庫脫穎而出
 
-**Why 95% not 100%?**
-- We validated training works (copy: 98.6%)
-- But haven't tested reverse/sort with new fixed-LR approach
-- Documentation makes claims we haven't validated
-- This is the 5% gap
+即使在 95%，這個儲存庫已經超過大多數教育 Transformer 儲存庫：
 
-**Is 95% enough?**
-- For learning: YES! ✅
-- For understanding Transformers: YES! ✅
-- For interviews: YES! ✅
-- For portfolio: MOSTLY (would recommend 100%)
-- For open-source release: NO (need validation)
+**獨特成就：**
+1. ✅ **修復關鍵學習率排程錯誤** - 大多數儲存庫只是複製論文設定
+2. ✅ **適當的 ML 評估** - 大多數沒有測試集
+3. ✅ **全面的疑難排解** - 大多數零除錯幫助
+4. ✅ **生產實踐** - 大多數是混亂的 notebooks
+5. ✅ **2,500+ 行教育註解** - 大多數有最少的文件
+6. ✅ **80+ 單元測試** - 大多數零測試
+7. ✅ **自動化基準測試套件** - 大多數是「相信我它有效」
+8. ✅ **完整的調查故事** - 大多數隱藏他們的錯誤
 
-**Priority:**
+---
+
+## 💡 建議
+
+### 對於「足夠好」
+只做**關鍵**項目（2-3 小時）：
+- 執行基準測試
+- 更新 PLAN.md
+- 快速清理
+- 完成！✅
+
+### 對於「作品集完美」
+做所有**關鍵 + 可選**項目（5-6 小時）：
+- 以上所有內容
+- 加上 examples/、CI/CD、圖表
+- 最終打磨
+- 真正的展示作品！⭐
+
+---
+
+## 📝 註記
+
+**為什麼是 95% 而不是 100%？**
+- 我們驗證了訓練有效（複製：98.6%）
+- 但還沒有使用新的固定學習率方法測試反轉/排序
+- 文件做出了我們還沒驗證的聲明
+- 這就是 5% 的差距
+
+**95% 夠了嗎？**
+- 對於學習：是！✅
+- 對於理解 Transformers：是！✅
+- 對於面試：是！✅
+- 對於作品集：大部分（建議 100%）
+- 對於開源發布：否（需要驗證）
+
+**優先順序：**
 ```
-Critical > Optional
-Validation > Features  
-Working code > Documentation
+關鍵 > 可選
+驗證 > 功能  
+運作的程式碼 > 文件
 ```
 
 ---
 
-## 🚀 Next Action
+## 🚀 下一個行動
 
-**Run this ONE command:**
+**執行這一個命令：**
 ```bash
 python benchmark.py
 ```
 
-**Then decide:**
-- ✅ All pass → Update docs, call it done!
-- ❌ Some fail → Fix issues, re-run, then done!
+**然後決定：**
+- ✅ 全部通過 → 更新文件，完成！
+- ❌ 部分失敗 → 修復問題，重新執行，然後完成！
 
-That's the 5% gap. Everything else is polish.
+這就是 5% 的差距。其他一切都是打磨。

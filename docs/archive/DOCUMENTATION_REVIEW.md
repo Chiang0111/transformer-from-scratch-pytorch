@@ -1,59 +1,59 @@
-# Documentation Files Review
+# 文件審查
 
-## 📚 Recommendation: Keep vs Archive
+## 📚 建議：保留 vs 封存
 
-### ✅ KEEP (Essential for open source users)
+### ✅ 保留（開源使用者必需）
 
-**User-facing documentation:**
-- `README.md` - Main entry point ⭐
-- `TRAINING.md` - Complete training guide ⭐
-- `TROUBLESHOOTING.md` - Debug guide ⭐
-- `FINAL_RESULTS.md` - Benchmark results ⭐
-- `VALIDATION.md` - Testing methodology
-- `PLAN.md` - Project roadmap
+**面向使用者的文件：**
+- `README.md` - 主要入口點 ⭐
+- `TRAINING.md` - 完整訓練指南 ⭐
+- `TROUBLESHOOTING.md` - 除錯指南 ⭐
+- `FINAL_RESULTS.md` - 基準測試結果 ⭐
+- `VALIDATION.md` - 測試方法
+- `PLAN.md` - 專案藍圖
 
-**Total: 6 essential files**
+**總計：6 個必要檔案**
 
-### 🗄️ ARCHIVE (Internal development notes)
+### 🗄️ 封存（內部開發筆記）
 
-**Redundant or internal:**
-- `BENCHMARK_STATUS.md` - Duplicates FINAL_RESULTS.md
-- `CHANGES_ML_EVAL.md` - Internal changelog (git history sufficient)
-- `ISSUE_SUMMARY.md` - Development investigation notes
-- `NEXT_STEPS.md` - Internal planning (covered in PLAN.md)
-- `PHASE3_SUMMARY.md` - Duplicates README project status
-- `SESSION_SUMMARY.md` - Internal session notes
-- `STATUS.md` - Redundant with README
-- `TRAINING_ISSUES.md` - Covered in TROUBLESHOOTING.md
+**冗餘或內部的：**
+- `BENCHMARK_STATUS.md` - 與 FINAL_RESULTS.md 重複
+- `CHANGES_ML_EVAL.md` - 內部變更日誌（git 歷史記錄已足夠）
+- `ISSUE_SUMMARY.md` - 開發調查筆記
+- `NEXT_STEPS.md` - 內部規劃（已涵蓋在 PLAN.md 中）
+- `PHASE3_SUMMARY.md` - 與 README 專案狀態重複
+- `SESSION_SUMMARY.md` - 內部會議筆記
+- `STATUS.md` - 與 README 冗餘
+- `TRAINING_ISSUES.md` - 已涵蓋在 TROUBLESHOOTING.md 中
 
-**Recommendation:** Create a `docs/archive/` folder for these, or just remove them (they're in git history if needed).
+**建議：** 為這些檔案建立 `docs/archive/` 資料夾，或直接移除（如需要可在 git 歷史記錄中找到）。
 
-### 📋 Action Items
+### 📋 行動項目
 
-1. **Keep 6 essential docs** in root
-2. **Create docs/ folder** for organized documentation:
+1. **在根目錄保留 6 個必要文件**
+2. **建立 docs/ 資料夾**以組織文件：
    ```
    docs/
    ├── TRAINING.md
    ├── TROUBLESHOOTING.md
    ├── VALIDATION.md
-   └── RESULTS.md (rename FINAL_RESULTS.md)
+   └── RESULTS.md (重新命名 FINAL_RESULTS.md)
    ```
-3. **Remove redundant files** or move to docs/archive/
-4. **Update README** to link to docs/ clearly
+3. **移除冗餘檔案**或移至 docs/archive/
+4. **更新 README**以清楚連結至 docs/
 
-### 🎯 Minimal Open Source Structure
+### 🎯 最小開源結構
 
-For maximum clarity, keep only:
+為了最大清晰度，僅保留：
 ```
 /
-├── README.md (with links to all docs)
+├── README.md (連結至所有文件)
 ├── LICENSE
 ├── requirements.txt
-├── TRAINING.md (or move to docs/)
+├── TRAINING.md (或移至 docs/)
 ├── transformer/
 ├── tests/
-└── ... (code files)
+└── ... (程式碼檔案)
 ```
 
-All other documentation in `docs/` folder.
+所有其他文件放在 `docs/` 資料夾中。

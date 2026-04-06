@@ -1,72 +1,72 @@
-# Next Steps - What to Do Now
+# 下一步 - 現在該做什麼
 
-**Status as of 2026-04-06:** Training fix is complete, but validation is incomplete.
-
----
-
-## ✅ What's Done
-
-1. **Root cause identified and fixed**
-   - Problem: Transformer LR schedule too high for small models
-   - Solution: Use fixed LR (`--fixed-lr 0.001`)
-   - Result: Copy task achieves 98.6% accuracy ✅
-
-2. **Code updated**
-   - ✅ `train.py` - Added `--fixed-lr` parameter
-   - ✅ `utils.py` - Fixed checkpoint saving, directory creation
-   - ✅ All bugs from testing fixed
-
-3. **Documentation created**
-   - ✅ `TROUBLESHOOTING.md` - Complete debugging guide
-   - ✅ `TRAINING.md` - Rewritten with correct info
-   - ✅ `TRAINING_ISSUES.md` - Technical deep-dive
-   - ✅ `ISSUE_SUMMARY.md` - Complete story
-   - ✅ `VALIDATION.md` - Why not Jupyter
-   - ✅ `README.md` - Updated commands
-
-4. **Testing tools created**
-   - ✅ `benchmark.py` - Automated validation
-   - ✅ `demo.py` - Interactive demo
-   - ✅ `tests/test_training.py` - Integration tests
+**截至 2026-04-06 的狀態：** 訓練修復完成，但驗證不完整。
 
 ---
 
-## ⚠️ What's NOT Done (CRITICAL)
+## ✅ 已完成的
 
-### Problem: Documentation Claims Not Validated
+1. **根本原因已識別並修復**
+   - 問題：Transformer 學習率排程對小型模型太高
+   - 解決方案：使用固定學習率（`--fixed-lr 0.001`）
+   - 結果：複製任務達到 98.6% 準確率 ✅
 
-Your docs currently claim:
-- **Copy:** "95-99% accuracy" ← Only ONE run verified (98.6%)
-- **Reverse:** "85-95% accuracy" ← **NEVER TESTED!** 🚨
-- **Sort:** "70-85% accuracy" ← **NEVER TESTED!** 🚨
+2. **程式碼已更新**
+   - ✅ `train.py` - 新增 `--fixed-lr` 參數
+   - ✅ `utils.py` - 修復檢查點儲存、目錄建立
+   - ✅ 所有測試中的錯誤已修復
 
-**This is risky!** What if:
-- Reverse task fails with fixed LR?
-- Sort task needs different LR?
-- Results aren't reproducible?
+3. **文件已建立**
+   - ✅ `TROUBLESHOOTING.md` - 完整除錯指南
+   - ✅ `TRAINING.md` - 以正確資訊重寫
+   - ✅ `TRAINING_ISSUES.md` - 技術深入探討
+   - ✅ `ISSUE_SUMMARY.md` - 完整故事
+   - ✅ `VALIDATION.md` - 為何不用 Jupyter
+   - ✅ `README.md` - 更新命令
+
+4. **測試工具已建立**
+   - ✅ `benchmark.py` - 自動驗證
+   - ✅ `demo.py` - 互動式示範
+   - ✅ `tests/test_training.py` - 整合測試
 
 ---
 
-## 🎯 Immediate Action Required
+## ⚠️ 未完成的（關鍵）
 
-### Step 1: Run Full Benchmark (30-60 minutes)
+### 問題：文件聲明未經驗證
+
+你的文件目前聲稱：
+- **複製：** 「95-99% 準確率」← 僅驗證一次運行（98.6%）
+- **反轉：** 「85-95% 準確率」← **從未測試！** 🚨
+- **排序：** 「70-85% 準確率」← **從未測試！** 🚨
+
+**這很危險！** 如果：
+- 反轉任務使用固定學習率失敗？
+- 排序任務需要不同的學習率？
+- 結果無法重現？
+
+---
+
+## 🎯 需要立即採取的行動
+
+### 步驟 1：執行完整基準測試（30-60 分鐘）
 
 ```bash
 python benchmark.py
 ```
 
-**This will:**
-- Train all 3 tasks with documented parameters
-- Validate accuracy meets documented claims
-- Save results to `benchmark_results/benchmark_TIMESTAMP.json`
-- Tell you if any claims are wrong
+**這將：**
+- 使用記錄的參數訓練所有 3 個任務
+- 驗證準確率符合記錄的聲明
+- 將結果儲存至 `benchmark_results/benchmark_TIMESTAMP.json`
+- 告訴你是否有任何聲明是錯誤的
 
-**Expected output:**
+**預期輸出：**
 ```
 ======================================================================
-BENCHMARK SUMMARY
+基準測試摘要
 ======================================================================
-Task            Status     Accuracy     Target       Time
+任務            狀態     準確率       目標         時間
 ----------------------------------------------------------------------
 copy            [OK]       XX.XX%       >=95.00%     Xm
 reverse         [OK/FAIL]  XX.XX%       >=80.00%     Xm
@@ -74,103 +74,103 @@ sort            [OK/FAIL]  XX.XX%       >=65.00%     Xm
 ======================================================================
 ```
 
-**If any task fails:**
-- Update `TRAINING.md` with correct targets
-- Adjust recommended parameters
-- Re-run benchmark until all pass
+**如果任何任務失敗：**
+- 使用正確的目標更新 `TRAINING.md`
+- 調整建議的參數
+- 重新執行基準測試直到全部通過
 
 ---
 
-### Step 2: Update Documentation with Actual Results
+### 步驟 2：使用實際結果更新文件
 
-Once benchmark passes, update docs:
+基準測試通過後，更新文件：
 
-**README.md:**
+**README.md：**
 ```markdown
-### Validated Performance
+### 已驗證的性能
 
-Benchmark results (run on 2026-04-06):
+基準測試結果（2026-04-06 執行）：
 
-| Task | Accuracy | Target | Status |
-|------|----------|--------|--------|
-| Copy | 98.6% | ≥95% | ✅ PASS |
-| Reverse | 87.3% | ≥80% | ✅ PASS |
-| Sort | 72.1% | ≥65% | ✅ PASS |
+| 任務 | 準確率 | 目標 | 狀態 |
+|------|--------|------|------|
+| 複製 | 98.6% | ≥95% | ✅ 通過 |
+| 反轉 | 87.3% | ≥80% | ✅ 通過 |
+| 排序 | 72.1% | ≥65% | ✅ 通過 |
 
-See [benchmark_results/](benchmark_results/) for detailed results.
+詳細結果請參見 [benchmark_results/](benchmark_results/)。
 ```
 
-**TRAINING.md:** Add actual results to performance tables
+**TRAINING.md：** 將實際結果新增至性能表格
 
 ---
 
-### Step 3: Test Demo Script
+### 步驟 3：測試示範腳本
 
 ```bash
-# Make sure demo works
+# 確保 demo 運作
 python demo.py
 
-# Test interactive mode
+# 測試互動模式
 python demo.py --interactive
 ```
 
-Should show nice output with predictions.
+應顯示具有預測的良好輸出。
 
 ---
 
-### Step 4: Run Integration Tests
+### 步驟 4：執行整合測試
 
 ```bash
-# Quick smoke tests
+# 快速冒煙測試
 pytest tests/test_training.py -v
 
-# Full test suite
+# 完整測試套件
 pytest tests/ -v
 ```
 
-Should all pass.
+應全部通過。
 
 ---
 
-## 📋 Validation Checklist
+## 📋 驗證檢查清單
 
-Copy this checklist and track your progress:
+複製此檢查清單並追蹤你的進度：
 
 ```markdown
-## Validation Status
+## 驗證狀態
 
-### Benchmarking
-- [ ] Run `python benchmark.py`
-- [ ] All 3 tasks pass (copy, reverse, sort)
-- [ ] Results saved to `benchmark_results/`
-- [ ] Screenshot of summary table
+### 基準測試
+- [ ] 執行 `python benchmark.py`
+- [ ] 所有 3 個任務通過（複製、反轉、排序）
+- [ ] 結果儲存至 `benchmark_results/`
+- [ ] 摘要表的截圖
 
-### Documentation
-- [ ] README.md updated with actual results
-- [ ] TRAINING.md performance tables updated
-- [ ] Link to benchmark results added
-- [ ] No unvalidated claims remain
+### 文件
+- [ ] 使用實際結果更新 README.md
+- [ ] 更新 TRAINING.md 性能表格
+- [ ] 新增至基準測試結果的連結
+- [ ] 不再有未經驗證的聲明
 
-### Testing
-- [ ] `python demo.py` works
-- [ ] `python demo.py --interactive` works
-- [ ] `pytest tests/test_training.py` passes
-- [ ] `pytest tests/` all pass
+### 測試
+- [ ] `python demo.py` 運作
+- [ ] `python demo.py --interactive` 運作
+- [ ] `pytest tests/test_training.py` 通過
+- [ ] `pytest tests/` 全部通過
 
-### Repository Quality
-- [ ] All training commands tested manually
-- [ ] Git commit with proper message
-- [ ] No placeholder/TODO comments
-- [ ] Ready for public viewing
+### 儲存庫品質
+- [ ] 所有訓練命令已手動測試
+- [ ] 使用適當訊息的 Git 提交
+- [ ] 無佔位符/TODO 註解
+- [ ] 準備好公開檢視
 ```
 
 ---
 
-## 🚀 Optional But Recommended
+## 🚀 可選但建議
 
-### Set Up CI/CD
+### 設定 CI/CD
 
-Create `.github/workflows/test.yml`:
+建立 `.github/workflows/test.yml`：
 
 ```yaml
 name: Tests
@@ -187,10 +187,10 @@ jobs:
           python-version: '3.10'
       - run: pip install -r requirements.txt
       - run: pytest tests/ -v
-      - run: python benchmark.py --quick  # 10 min quick validation
+      - run: python benchmark.py --quick  # 10 分鐘快速驗證
 ```
 
-### Create Requirements File
+### 建立 Requirements 檔案
 
 ```bash
 # requirements.txt
@@ -198,150 +198,150 @@ torch>=2.0.0
 pytest>=7.0.0
 ```
 
-### Add Benchmark Results to Git
+### 將基準測試結果新增至 Git
 
 ```bash
-# Track benchmark results (they're small JSON files)
+# 追蹤基準測試結果（它們是小型 JSON 檔案）
 git add benchmark_results/
 git commit -m "Add validated benchmark results"
 ```
 
 ---
 
-## 🎓 What You Learned
+## 🎓 你學到了什麼
 
-### Technical Lessons
+### 技術經驗
 
-1. **Paper hyperparameters don't transfer**
-   - Original Transformer schedule fails on small models
-   - Simple fixed LR works better
-   - Always validate on your specific setup
+1. **論文超參數不能轉移**
+   - 原始 Transformer 排程在小型模型上失敗
+   - 簡單的固定學習率效果更好
+   - 總是在你的特定設定上驗證
 
-2. **Test claims before documenting them**
-   - We initially claimed reverse/sort work without testing
-   - Could have been embarrassing if publicly released
-   - Benchmark validates claims automatically
+2. **在記錄之前測試聲明**
+   - 我們最初在未測試的情況下聲稱反轉/排序有效
+   - 如果公開發布可能會很尷尬
+   - 基準測試自動驗證聲明
 
-3. **Jupyter isn't always the answer**
-   - Professional code > notebook exploration
-   - Automated testing > manual validation
-   - Version control matters
+3. **Jupyter 不總是答案**
+   - 專業程式碼 > notebook 探索
+   - 自動化測試 > 手動驗證
+   - 版本控制很重要
 
-### Process Lessons
+### 流程經驗
 
-1. **Start with minimal validation**
-   - Overfit test proved architecture works
-   - Single task proved parameters work
-   - Full benchmark validates everything
+1. **從最小驗證開始**
+   - 過擬合測試證明架構有效
+   - 單一任務證明參數有效
+   - 完整基準測試驗證所有內容
 
-2. **Document as you go**
-   - Created comprehensive guides
-   - Future users won't repeat mistakes
-   - Knowledge preserved
+2. **隨時記錄**
+   - 建立全面指南
+   - 未來使用者不會重複錯誤
+   - 保存知識
 
-3. **Automation prevents regression**
-   - Benchmark catches breaking changes
-   - CI/CD enforces quality
-   - Tests are documentation
-
----
-
-## 📊 Current Repository Quality
-
-| Aspect | Status | Notes |
-|--------|--------|-------|
-| **Code Quality** | ✅ Excellent | Modular, tested, documented |
-| **Architecture** | ✅ Verified | 80+ unit tests, overfit test passes |
-| **Documentation** | ⚠️ Partial | Good but claims not validated |
-| **Training** | ⚠️ Partial | Copy works, others untested |
-| **Testing** | ✅ Good | Unit + integration tests |
-| **Automation** | ⚠️ Missing | No CI/CD yet |
-| **Portfolio-Ready** | ⚠️ Almost | Need validation complete |
-
-**To reach "Excellent" across the board:**
-- ✅ Run full benchmark
-- ✅ Update docs with results
-- ✅ Set up CI/CD
-- ✅ Final manual testing
+3. **自動化防止回歸**
+   - 基準測試捕捉破壞性變更
+   - CI/CD 強制執行品質
+   - 測試就是文件
 
 ---
 
-## 💡 Pro Tips
+## 📊 當前儲存庫品質
 
-### Before Sharing Publicly
+| 方面 | 狀態 | 註解 |
+|------|------|------|
+| **程式碼品質** | ✅ 優秀 | 模組化、已測試、已記錄 |
+| **架構** | ✅ 已驗證 | 80+ 單元測試，過擬合測試通過 |
+| **文件** | ⚠️ 部分 | 良好但聲明未經驗證 |
+| **訓練** | ⚠️ 部分 | 複製有效，其他未測試 |
+| **測試** | ✅ 良好 | 單元 + 整合測試 |
+| **自動化** | ⚠️ 缺少 | 尚無 CI/CD |
+| **作品集就緒** | ⚠️ 幾乎 | 需要完成驗證 |
 
-1. **Run full benchmark** - Don't claim what you haven't tested
-2. **Test all commands in docs** - Make sure they actually work
-3. **Have someone else try it** - Fresh eyes catch issues
-4. **Check on different OS** - Windows vs Linux differences
-
-### For Your Portfolio
-
-1. **Emphasize the debugging process** - Show problem-solving skills
-2. **Highlight automated testing** - Demonstrates best practices
-3. **Link to specific commits** - Show thoughtful git history
-4. **Explain design decisions** - Why no Jupyter, why this structure
-
-### For Future Development
-
-1. **Keep benchmarks updated** - Re-run after major changes
-2. **Add new tasks gradually** - Validate each one
-3. **Document failures too** - Learning from mistakes is valuable
-4. **Version your results** - Track improvement over time
+**要在所有方面達到「優秀」：**
+- ✅ 執行完整基準測試
+- ✅ 使用結果更新文件
+- ✅ 設定 CI/CD
+- ✅ 最終手動測試
 
 ---
 
-## ✨ Final Thoughts
+## 💡 專業提示
 
-**You're 90% done!** The hard part (debugging, fixing, documenting) is complete.
+### 公開分享之前
 
-**The remaining 10%:**
-- Run benchmark (1 hour)
-- Update docs with results (30 min)
-- Final testing (30 min)
+1. **執行完整基準測試** - 不要聲稱你沒有測試過的東西
+2. **測試文件中的所有命令** - 確保它們實際運作
+3. **讓別人試試** - 新眼光能發現問題
+4. **在不同作業系統上檢查** - Windows vs Linux 差異
 
-**Then you'll have:**
-- ✅ Production-ready code
-- ✅ Comprehensive documentation
-- ✅ Validated claims
-- ✅ Professional testing
-- ✅ Portfolio-worthy project
+### 對你的作品集
 
-**One command to finish:**
+1. **強調除錯過程** - 展示解決問題的技能
+2. **突出自動化測試** - 展示最佳實踐
+3. **連結至特定提交** - 展示周到的 git 歷史
+4. **解釋設計決策** - 為何不用 Jupyter，為何是這個結構
+
+### 對未來開發
+
+1. **保持基準測試更新** - 重大變更後重新執行
+2. **逐步新增新任務** - 驗證每一個
+3. **也記錄失敗** - 從錯誤中學習很有價值
+4. **版本化你的結果** - 追蹤隨時間的改進
+
+---
+
+## ✨ 最後想法
+
+**你 90% 完成了！** 困難的部分（除錯、修復、記錄）已完成。
+
+**剩餘的 10%：**
+- 執行基準測試（1 小時）
+- 使用結果更新文件（30 分鐘）
+- 最終測試（30 分鐘）
+
+**然後你將擁有：**
+- ✅ 生產就緒的程式碼
+- ✅ 全面的文件
+- ✅ 已驗證的聲明
+- ✅ 專業的測試
+- ✅ 作品集級專案
+
+**完成的一個命令：**
 ```bash
-python benchmark.py  # Let it run while you get coffee ☕
+python benchmark.py  # 讓它運行，同時你去喝杯咖啡 ☕
 ```
 
 ---
 
-## 📞 If You Get Stuck
+## 📞 如果你卡住了
 
-### Benchmark Fails
+### 基準測試失敗
 
-**If copy task fails:**
-- Check the error output
-- Maybe need to adjust min_accuracy in benchmark.py
-- Could be random variation
+**如果複製任務失敗：**
+- 檢查錯誤輸出
+- 可能需要在 benchmark.py 中調整 min_accuracy
+- 可能是隨機變異
 
-**If reverse/sort fail:**
-- Try different learning rates
-- Adjust target accuracy in docs
-- Document actual performance honestly
+**如果反轉/排序失敗：**
+- 嘗試不同的學習率
+- 在文件中調整目標準確率
+- 誠實地記錄實際性能
 
-### Tests Fail
+### 測試失敗
 
-**Check:**
-- All dependencies installed?
-- Using Python 3.8+?
-- Latest code pulled?
+**檢查：**
+- 所有依賴項已安裝？
+- 使用 Python 3.8+？
+- 已拉取最新程式碼？
 
-### Need Help
+### 需要幫助
 
-**Check these docs first:**
-1. `TROUBLESHOOTING.md` - Common issues
-2. `VALIDATION.md` - Testing strategy
-3. `TRAINING_ISSUES.md` - Technical details
+**首先檢查這些文件：**
+1. `TROUBLESHOOTING.md` - 常見問題
+2. `VALIDATION.md` - 測試策略
+3. `TRAINING_ISSUES.md` - 技術細節
 
 ---
 
-**Good luck! You're almost there!** 🚀
+**祝好運！你快到了！** 🚀

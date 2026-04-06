@@ -1,236 +1,236 @@
-# ML Evaluation Improvements
+# ML 評估改進
 
-**Date:** 2026-04-06  
-**Status:** ✅ Complete
-
----
-
-## 🎯 What We Fixed
-
-Previously, the repo had a **data leakage problem**:
-- Only 2 splits: 90% train, 10% validation
-- Validation set used for checkpoint selection
-- Model "indirectly saw" validation data through training
-- Reported accuracy was optimistically biased
-
-**This violated basic ML hygiene!**
+**日期：** 2026-04-06  
+**狀態：** ✅ 完成
 
 ---
 
-## ✅ Changes Made
+## 🎯 我們修復的問題
 
-### 1. Proper Train/Val/Test Split
+之前，這個專案有一個**資料洩漏問題**：
+- 只有 2 個分割：90% 訓練集，10% 驗證集
+- 驗證集用於檢查點選擇
+- 模型透過訓練過程「間接看到」驗證資料
+- 報告的準確率有樂觀偏差
 
-**Before:**
+**這違反了基本的 ML 規範！**
+
+---
+
+## ✅ 所做的變更
+
+### 1. 適當的訓練/驗證/測試分割
+
+**之前：**
 ```python
-# datasets.py - WRONG
+# datasets.py - 錯誤
 train_size = 90%
 val_size = 10%
-# No test set!
+# 沒有測試集！
 ```
 
-**After:**
+**之後：**
 ```python
-# datasets.py - CORRECT
-train_size = 80%  # For training
-val_size = 10%    # For checkpoint selection (seen indirectly)
-test_size = 10%   # Never touched - true performance
+# datasets.py - 正確
+train_size = 80%  # 用於訓練
+val_size = 10%    # 用於檢查點選擇（間接看到）
+test_size = 10%   # 從未接觸 - 真實性能
 ```
 
-### 2. Test Set Evaluation in Training
+### 2. 訓練中的測試集評估
 
-**Added to `train.py`:**
+**新增至 `train.py`：**
 ```
->> FINAL TEST SET EVALUATION
-Evaluating on held-out test set (never seen during training)...
+>> 最終測試集評估
+在從未在訓練期間看到的保留測試集上評估...
 
-[+] Test Set Results:
-   Loss:      0.0461
-   Token Acc: 98.67%
-   Seq Acc:   98.60%   ← This is the real metric!
-   Perplexity: 1.05
-```
-
-### 3. Benchmark Reports Test Metrics
-
-**Updated `benchmark.py`:**
-- Parses test set results from training output
-- Reports test accuracy (not validation accuracy)
-- Saves test metrics to JSON
-
-**Output:**
-```
-Test Accuracy: 98.60% (target: >=95.00%)
+[+] 測試集結果：
+   損失：      0.0461
+   詞元準確率： 98.67%
+   序列準確率： 98.60%   ← 這是真實指標！
+   困惑度：     1.05
 ```
 
-### 4. Updated All Scripts
+### 3. 基準測試報告測試指標
 
-Fixed these files to handle new 3-way split:
-- ✅ `train.py` - Shows test results at end
-- ✅ `datasets.py` - Returns test_loader
-- ✅ `benchmark.py` - Reports test metrics
-- ✅ `test_overfit.py` - Handles new return value
-- ✅ `test_simple_training.py` - Handles new return value
-- ✅ `demo.py` - Handles new return value
-- ✅ `test.py` - Uses test set properly
-- ✅ `debug_*.py` - All updated
+**更新 `benchmark.py`：**
+- 從訓練輸出解析測試集結果
+- 報告測試準確率（而非驗證準確率）
+- 將測試指標儲存至 JSON
 
-### 5. Documentation
+**輸出：**
+```
+測試準確率：98.60%（目標：>=95.00%）
+```
 
-**Added to `TRAINING.md`:**
+### 4. 更新所有腳本
+
+修復這些檔案以處理新的三方分割：
+- ✅ `train.py` - 最後顯示測試結果
+- ✅ `datasets.py` - 返回 test_loader
+- ✅ `benchmark.py` - 報告測試指標
+- ✅ `test_overfit.py` - 處理新的返回值
+- ✅ `test_simple_training.py` - 處理新的返回值
+- ✅ `demo.py` - 處理新的返回值
+- ✅ `test.py` - 正確使用測試集
+- ✅ `debug_*.py` - 全部更新
+
+### 5. 文件
+
+**新增至 `TRAINING.md`：**
 ```markdown
-## Data Splits (Proper ML Practice)
+## 資料分割（適當的 ML 實踐）
 
-Training (80%): Train the model
-Validation (10%): Select best checkpoint
-Test (10%): Never seen - final evaluation
+訓練集（80%）：訓練模型
+驗證集（10%）：選擇最佳檢查點
+測試集（10%）：從未看過 - 最終評估
 
-Test accuracy is what you should report.
+應報告測試準確率。
 ```
 
 ---
 
-## 📊 What Changed for Users
+## 📊 對使用者的變更
 
-### Before
+### 之前
 ```bash
 python train.py --task copy
 
-# Output:
-Best validation accuracy: 98.60%
+# 輸出：
+最佳驗證準確率：98.60%
 ```
-**Problem:** This is biased! Model selected based on this metric.
+**問題：** 這有偏差！模型是基於此指標選擇的。
 
-### After
+### 之後
 ```bash
 python train.py --task copy
 
-# Output:
-Best validation accuracy: 97.80%  ← For checkpoint selection
-Test Set Results:
-   Seq Acc: 98.60%  ← Report this one!
+# 輸出：
+最佳驗證準確率：97.80%  ← 用於檢查點選擇
+測試集結果：
+   序列準確率：98.60%  ← 報告這個！
 ```
-**Better:** Test accuracy is unbiased, true performance.
+**更好：** 測試準確率是無偏的真實性能。
 
 ---
 
-## 🎓 Educational Value
+## 🎓 教育價值
 
-This change teaches:
+這個變更教導：
 
-1. **Proper ML evaluation methodology**
-   - Why you need train/val/test splits
-   - Data leakage and why it matters
-   - Held-out evaluation
+1. **適當的 ML 評估方法**
+   - 為什麼需要訓練/驗證/測試分割
+   - 資料洩漏及其重要性
+   - 保留評估
 
-2. **Production best practices**
-   - Don't report validation accuracy
-   - Always have held-out test set
-   - Checkpoint selection vs final evaluation
+2. **生產最佳實踐**
+   - 不要報告驗證準確率
+   - 總是要有保留測試集
+   - 檢查點選擇 vs 最終評估
 
-3. **Portfolio quality**
-   - Shows you understand basic ML
-   - Demonstrates professional practices
-   - Not just "demo that works"
-
----
-
-## ⚠️ What We Did NOT Add (Intentionally)
-
-Deliberately skipped these **out-of-scope** features:
-
-❌ **Multiple runs with confidence intervals**
-- Example: "98.2% ± 0.4% (n=5)"
-- Why skip: Out of scope, repo is about Transformers not statistics
-
-❌ **Statistical significance testing**
-- Example: t-tests, p-values
-- Why skip: Overkill for educational repo
-
-❌ **Learning curve plots**
-- Example: Loss vs epoch graphs
-- Why skip: Nice but distracts from architecture focus
-
-❌ **Confusion matrices**
-- Example: Per-class accuracy breakdown
-- Why skip: Not applicable to sequence tasks
-
-❌ **Cross-validation**
-- Example: 5-fold CV
-- Why skip: Computational overkill
-
-❌ **Error analysis framework**
-- Example: Categorizing failure modes
-- Why skip: Would need separate repo
-
-**Rationale:** This repo is "Transformers from Scratch", not "ML Evaluation Best Practices". We fixed the data leakage issue (mandatory) but stopped short of turning it into a stats textbook.
+3. **作品集品質**
+   - 展示你理解基本 ML
+   - 展示專業實踐
+   - 不只是「能運作的 demo」
 
 ---
 
-## 🧪 Testing
+## ⚠️ 我們沒有新增的內容（刻意的）
 
-**Verified:**
+刻意跳過這些**超出範圍**的功能：
+
+❌ **多次運行與信賴區間**
+- 範例：「98.2% ± 0.4%（n=5）」
+- 為何跳過：超出範圍，此專案關於 Transformers 而非統計學
+
+❌ **統計顯著性測試**
+- 範例：t 檢定、p 值
+- 為何跳過：對教育專案過度了
+
+❌ **學習曲線圖**
+- 範例：損失 vs epoch 圖表
+- 為何跳過：不錯但會分散對架構的關注
+
+❌ **混淆矩陣**
+- 範例：每類準確率分解
+- 為何跳過：不適用於序列任務
+
+❌ **交叉驗證**
+- 範例：5 折交叉驗證
+- 為何跳過：計算過度
+
+❌ **錯誤分析框架**
+- 範例：分類失敗模式
+- 為何跳過：需要單獨的專案
+
+**理由：** 此專案是「從零開始的 Transformers」，而非「ML 評估最佳實踐」。我們修復了資料洩漏問題（必須的），但沒有將其變成統計教科書。
+
+---
+
+## 🧪 測試
+
+**已驗證：**
 ```bash
-# Architecture still works
-python test_overfit.py  # ✅ PASS
+# 架構仍然運作
+python test_overfit.py  # ✅ 通過
 
-# Training works end-to-end
-python train.py --task copy --epochs 3  # ✅ Shows test results
+# 訓練端到端運作
+python train.py --task copy --epochs 3  # ✅ 顯示測試結果
 
-# All scripts still work
-python demo.py  # ✅ PASS
-python test.py --checkpoint checkpoints/checkpoint_best.pt  # ✅ PASS
+# 所有腳本仍然運作
+python demo.py  # ✅ 通過
+python test.py --checkpoint checkpoints/checkpoint_best.pt  # ✅ 通過
 ```
 
 ---
 
-## 📈 Impact on Reported Metrics
+## 📈 對報告指標的影響
 
-**Expected changes:**
-- Test accuracy typically **1-3% lower** than validation accuracy
-- This is normal! Test set is truly held-out
-- More honest representation of performance
+**預期變化：**
+- 測試準確率通常比驗證準確率**低 1-3%**
+- 這是正常的！測試集是真正保留的
+- 更誠實地呈現性能
 
-**Example:**
+**範例：**
 ```
-Before (validation acc): 98.6%  ← Optimistically biased
-After (test acc): 97.3%  ← True performance
+之前（驗證準確率）：98.6%  ← 樂觀偏差
+之後（測試準確率）：97.3%  ← 真實性能
 ```
 
-If test << validation:
-- ✅ Normal (1-3% gap)
-- ⚠️ Overfitting if gap > 5%
-- 🚨 Problem if gap > 10%
+如果測試 << 驗證：
+- ✅ 正常（1-3% 差距）
+- ⚠️ 如果差距 > 5% 則過擬合
+- 🚨 如果差距 > 10% 則有問題
 
 ---
 
-## 📋 Checklist for Future Work
+## 📋 未來工作檢查清單
 
-When adding new features:
-- [ ] Always evaluate on test set (never train/val)
-- [ ] Report test metrics in papers/docs
-- [ ] Don't use test set for hyperparameter tuning
-- [ ] Consider test set size (10% = 1000 samples is reasonable)
+新增功能時：
+- [ ] 總是在測試集上評估（從不在訓練/驗證集）
+- [ ] 在論文/文件中報告測試指標
+- [ ] 不要使用測試集進行超參數調整
+- [ ] 考慮測試集大小（10% = 1000 樣本是合理的）
 
 ---
 
-## 🎯 Summary
+## 🎯 總結
 
-**What we fixed:**
-- ✅ Proper train/val/test split (80/10/10)
-- ✅ Test set evaluation in training
-- ✅ Benchmark reports test metrics
-- ✅ Documentation explains why
+**我們修復的：**
+- ✅ 適當的訓練/驗證/測試分割（80/10/10）
+- ✅ 訓練中的測試集評估
+- ✅ 基準測試報告測試指標
+- ✅ 文件解釋原因
 
-**What we didn't add:**
-- ❌ Advanced statistics (out of scope)
-- ❌ Multiple runs / CI (overkill)
-- ❌ Fancy visualizations (distraction)
+**我們沒有新增的：**
+- ❌ 進階統計（超出範圍）
+- ❌ 多次運行 / CI（過度）
+- ❌ 花俏的視覺化（分心）
 
-**Result:**
-- ✅ ML correctness (no data leakage)
-- ✅ Professional practices (held-out eval)
-- ✅ Educational value (teaches proper splits)
-- ✅ Stays focused (Transformers, not ML theory)
+**結果：**
+- ✅ ML 正確性（無資料洩漏）
+- ✅ 專業實踐（保留評估）
+- ✅ 教育價值（教導適當的分割）
+- ✅ 保持專注（Transformers，而非 ML 理論）
 
-**This is the right balance for this repo!**
+**這是此專案的正確平衡！**

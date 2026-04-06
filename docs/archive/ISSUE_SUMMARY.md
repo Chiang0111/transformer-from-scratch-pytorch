@@ -1,137 +1,137 @@
-# Issue Summary: Training Failure Investigation
+# 問題總結：訓練失敗調查
 
-**Date:** 2026-04-06  
-**Status:** ✅ RESOLVED  
-**Root Cause:** Transformer LR schedule incompatible with small models
-
----
-
-## 📖 What Happened - Complete Story
-
-### The Problem
-
-Training a small Transformer model (d_model=128, 2 layers) on a simple copy task completely failed:
-- Ran for 30 epochs
-- Loss stuck at ~2.9-3.0 (random guessing)
-- Accuracy stayed at ~13% (barely better than 5% random)
-- Generated only empty sequences or repeated the same token
-- Model learned NOTHING
-
-### Initial Investigation (Day 1)
-
-We ran comprehensive diagnostics:
-
-1. **Overfitting test** ✅ PASSED
-   - Trained on just 4 samples
-   - Reached loss ~0.0000, 100% accuracy
-   - **Conclusion:** Architecture is correct!
-
-2. **Gradient analysis** ✅ PASSED
-   - All gradients flowing correctly
-   - Norms in healthy range (2-3)
-   - No vanishing/exploding gradients
-
-3. **Architecture verification** ✅ PASSED
-   - Encoder outputs: mean=0.04, std=2.8 ✓
-   - Decoder outputs: mean=-0.1, std=1.1 ✓
-   - Logits variance: std=0.68 ✓
-
-**Initial diagnosis (INCORRECT):** We thought learning rate was "too low" because the Transformer formula includes `d_model^(-0.5)`, and smaller d_model → smaller base LR. We tried increasing `lr_factor` from 2.0 to 10.0.
-
-### Breakthrough Discovery (Day 2)
-
-We ran controlled experiments comparing different training approaches:
-
-#### Experiment 1: Overfit test (reference)
-```bash
-LR: Fixed 0.001
-Dropout: 0.0
-Label smoothing: 0.0
-Result: ✅ SUCCESS - Loss 0.0000, 100% accuracy
-```
-
-#### Experiment 2: Full training with Transformer schedule
-```bash
-LR: Transformer schedule (lr_factor=10.0, warmup=500)
-Dropout: 0.0
-Label smoothing: 0.0
-Result: ❌ FAILED - Stuck at 7-13% accuracy
-```
-
-#### Experiment 3: Full training with fixed LR
-```bash
-LR: Fixed 0.001
-Dropout: 0.0
-Label smoothing: 0.0
-Result: ✅ SUCCESS - 98.6% accuracy in 7 epochs!
-```
-
-| Epoch | Experiment 2 (Schedule) | Experiment 3 (Fixed LR) |
-|-------|-------------------------|-------------------------|
-| 1 | 7% accuracy ❌ | 66% → 95% accuracy ✅ |
-| 3 | 8% accuracy ❌ | 98% accuracy ✅ |
-| 7 | 8% accuracy ❌ | 99.6% accuracy ✅ |
-
-**The pattern was clear: The Transformer LR schedule was the problem!**
+**日期：** 2026-04-06  
+**狀態：** ✅ 已解決  
+**根本原因：** Transformer 學習率排程與小型模型不相容
 
 ---
 
-## 🔍 Root Cause Analysis
+## 📖 發生了什麼 - 完整故事
 
-### Why the Transformer Schedule Fails
+### 問題
 
-The Transformer LR schedule from the paper:
+在簡單的複製任務上訓練小型 Transformer 模型（d_model=128，2 層）完全失敗：
+- 運行了 30 個 epoch
+- 損失卡在 ~2.9-3.0（隨機猜測）
+- 準確率停留在 ~13%（僅略優於 5% 隨機）
+- 生成的序列全是空的或重複相同的詞元
+- 模型什麼都沒學到
+
+### 初步調查（第 1 天）
+
+我們進行了全面診斷：
+
+1. **過擬合測試** ✅ 通過
+   - 僅在 4 個樣本上訓練
+   - 達到損失 ~0.0000，100% 準確率
+   - **結論：** 架構是正確的！
+
+2. **梯度分析** ✅ 通過
+   - 所有梯度正確流動
+   - 範數在健康範圍內（2-3）
+   - 無梯度消失/爆炸
+
+3. **架構驗證** ✅ 通過
+   - Encoder 輸出：mean=0.04，std=2.8 ✓
+   - Decoder 輸出：mean=-0.1，std=1.1 ✓
+   - Logits 變異數：std=0.68 ✓
+
+**初步診斷（不正確）：** 我們認為學習率「太低」，因為 Transformer 公式包含 `d_model^(-0.5)`，較小的 d_model → 較小的基礎學習率。我們嘗試將 `lr_factor` 從 2.0 提高到 10.0。
+
+### 突破性發現（第 2 天）
+
+我們進行了控制實驗，比較不同的訓練方法：
+
+#### 實驗 1：過擬合測試（參考）
+```bash
+學習率：固定 0.001
+Dropout：0.0
+標籤平滑：0.0
+結果：✅ 成功 - 損失 0.0000，100% 準確率
+```
+
+#### 實驗 2：使用 Transformer 排程的完整訓練
+```bash
+學習率：Transformer 排程（lr_factor=10.0，warmup=500）
+Dropout：0.0
+標籤平滑：0.0
+結果：❌ 失敗 - 卡在 7-13% 準確率
+```
+
+#### 實驗 3：使用固定學習率的完整訓練
+```bash
+學習率：固定 0.001
+Dropout：0.0
+標籤平滑：0.0
+結果：✅ 成功 - 7 個 epoch 內達到 98.6% 準確率！
+```
+
+| Epoch | 實驗 2（排程） | 實驗 3（固定學習率） |
+|-------|----------------|---------------------|
+| 1 | 7% 準確率 ❌ | 66% → 95% 準確率 ✅ |
+| 3 | 8% 準確率 ❌ | 98% 準確率 ✅ |
+| 7 | 8% 準確率 ❌ | 99.6% 準確率 ✅ |
+
+**模式很明確：Transformer 學習率排程就是問題所在！**
+
+---
+
+## 🔍 根本原因分析
+
+### 為何 Transformer 排程失敗
+
+論文中的 Transformer 學習率排程：
 ```python
 lr = d_model^(-0.5) * min(step^(-0.5), step * warmup^(-1.5)) * lr_factor
 ```
 
-With our settings (d_model=128, warmup=500, lr_factor=10.0):
+使用我們的設定（d_model=128，warmup=500，lr_factor=10.0）：
 
-| Step | Learning Rate | Problem |
-|------|---------------|---------|
-| 1 | 0.000079 | Too low initially |
-| 100 | 0.007906 | **7.9x too high** |
-| 500 (peak) | 0.039528 | **39x too high!** |
-| Avg (Epoch 1) | 0.005613 | **5.6x too high** |
+| 步數 | 學習率 | 問題 |
+|------|--------|------|
+| 1 | 0.000079 | 初期太低 |
+| 100 | 0.007906 | **高出 7.9 倍** |
+| 500（峰值） | 0.039528 | **高出 39 倍！** |
+| 平均（Epoch 1） | 0.005613 | **高出 5.6 倍** |
 
-**What actually works:** Fixed LR = 0.001
+**實際有效的：** 固定學習率 = 0.001
 
-### Why This Happens
+### 為何發生這種情況
 
-**The original Transformer paper designed the schedule for:**
-- **Large models:** d_model=512, 6 encoder + 6 decoder layers (~100M parameters)
-- **Complex tasks:** Machine translation (English ↔ German)
-- **Huge datasets:** WMT dataset with millions of sentence pairs
-- **Long training:** 100,000+ optimization steps
-- **Scale:** Production-grade neural machine translation
+**原始 Transformer 論文設計的排程針對：**
+- **大型模型：** d_model=512，6 個 encoder + 6 個 decoder 層（~1 億參數）
+- **複雜任務：** 機器翻譯（英語 ↔ 德語）
+- **大型資料集：** 數百萬句子對的 WMT 資料集
+- **長期訓練：** 100,000+ 優化步驟
+- **規模：** 生產級神經機器翻譯
 
-**Our setup:**
-- **Small model:** d_model=128, 2 encoder + 2 decoder layers (~1M parameters)
-- **Simple task:** Copy sequences (trivial pattern learning)
-- **Small dataset:** 10,000 synthetic sequences
-- **Short training:** ~4,000 steps (30 epochs)
-- **Scale:** Educational demonstration
+**我們的設定：**
+- **小型模型：** d_model=128，2 個 encoder + 2 個 decoder 層（~100 萬參數）
+- **簡單任務：** 複製序列（簡單模式學習）
+- **小型資料集：** 10,000 個合成序列
+- **短期訓練：** ~4,000 步驟（30 個 epoch）
+- **規模：** 教育示範
 
-**The schedule that works for "learn all of English grammar" doesn't work for "copy these numbers."**
+**適用於「學習所有英文文法」的排程不適用於「複製這些數字」。**
 
-### Why High LR Causes Failure
+### 為何高學習率導致失敗
 
-When learning rate is too high:
-1. Weights "jump" too far in parameter space
-2. Model overshoots the optimal solution
-3. Never converges to a stable pattern
-4. Like trying to land a plane but over-correcting every maneuver
+當學習率太高時：
+1. 權重在參數空間中「跳躍」太遠
+2. 模型超過最佳解決方案
+3. 永遠無法收斂到穩定模式
+4. 就像試圖降落飛機但每次操作都過度修正
 
-The model oscillates wildly and never learns anything, appearing stuck at random guessing.
+模型劇烈震盪，從未學到任何東西，看起來卡在隨機猜測。
 
 ---
 
-## ✅ The Solution
+## ✅ 解決方案
 
-### Use Fixed Learning Rate
+### 使用固定學習率
 
 ```bash
-# ✅ CORRECT - Simple and works
+# ✅ 正確 - 簡單且有效
 python train.py --task copy --epochs 20 \
   --fixed-lr 0.001 \
   --label-smoothing 0.0 \
@@ -139,195 +139,195 @@ python train.py --task copy --epochs 20 \
 ```
 
 ```bash
-# ❌ WRONG - Will fail on small models
+# ❌ 錯誤 - 在小型模型上會失敗
 python train.py --task copy --epochs 30 \
   --lr-factor 10.0 \
   --warmup-steps 500 \
   --label-smoothing 0.0
 ```
 
-### Expected Results
+### 預期結果
 
-With fixed LR=0.001:
+使用固定學習率 = 0.001：
 
 ```
-Epoch 1: 66% → 95% accuracy (learning fast!)
-Epoch 3: 98% accuracy (near perfect)
-Epoch 5: 99% → 99% accuracy (all examples correct)
-Epoch 7: 99.6% → 98.6% accuracy (BEST)
+Epoch 1：66% → 95% 準確率（學習快速！）
+Epoch 3：98% 準確率（接近完美）
+Epoch 5：99% → 99% 準確率（所有範例正確）
+Epoch 7：99.6% → 98.6% 準確率（最佳）
 
-Final: 98.6% sequence accuracy
+最終：98.6% 序列準確率
 ```
 
-All generation examples correct:
+所有生成範例正確：
 ```
-Example 1: [OK] CORRECT
-  Input:    [16, 17, 14, 15]
-  Expected: [16, 17, 14, 15]
-  Got:      [16, 17, 14, 15]
+範例 1：[OK] 正確
+  輸入：    [16, 17, 14, 15]
+  預期：    [16, 17, 14, 15]
+  得到：    [16, 17, 14, 15]
 ```
 
 ---
 
-## 📝 Changes Made
+## 📝 所做的變更
 
-### Code Changes
+### 程式碼變更
 
 1. **train.py**
-   - Added `--fixed-lr` parameter to support fixed learning rates
-   - Made scheduler optional (None when using fixed LR)
-   - Updated LR reporting to handle both fixed and scheduled LRs
+   - 新增 `--fixed-lr` 參數以支援固定學習率
+   - 使排程器可選（使用固定學習率時為 None）
+   - 更新學習率報告以處理固定和排程的學習率
 
 2. **utils.py**
-   - Fixed checkpoint saving to handle optional scheduler
-   - Changed: `scheduler.step_num if scheduler is not None else 0`
+   - 修復檢查點儲存以處理可選排程器
+   - 變更：`scheduler.step_num if scheduler is not None else 0`
 
-### Documentation Updates
+### 文件更新
 
-1. **TROUBLESHOOTING.md** (NEW)
-   - Complete guide for diagnosing training failures
-   - Explains why Transformer schedule fails for small models
-   - Visual comparisons and decision trees
-   - Clear symptoms → diagnosis → solution flow
+1. **TROUBLESHOOTING.md**（新建）
+   - 診斷訓練失敗的完整指南
+   - 解釋為何 Transformer 排程在小型模型上失敗
+   - 視覺比較和決策樹
+   - 清晰的症狀 → 診斷 → 解決方案流程
 
-2. **TRAINING.md** (REWRITTEN)
-   - Removed all incorrect Transformer schedule recommendations
-   - Updated to use `--fixed-lr 0.001` everywhere
-   - Added expected performance benchmarks
-   - Clear explanation of when to use fixed LR vs schedule
+2. **TRAINING.md**（重寫）
+   - 移除所有不正確的 Transformer 排程建議
+   - 更新為到處使用 `--fixed-lr 0.001`
+   - 新增預期性能基準
+   - 清楚解釋何時使用固定學習率 vs 排程
 
-3. **TRAINING_ISSUES.md** (UPDATED)
-   - Added CRITICAL UPDATE section at top
-   - Documented the real root cause
-   - Kept technical deep-dive for developers
+3. **TRAINING_ISSUES.md**（更新）
+   - 在頂部新增關鍵更新部分
+   - 記錄真正的根本原因
+   - 保留技術深入探討供開發者參考
 
-4. **README.md** (UPDATED)
-   - Updated Quick Start commands to use fixed LR
-   - Added link to TROUBLESHOOTING.md
-   - Added note about hyperparameter tuning for small models
-
----
-
-## 🎓 Key Lessons Learned
-
-### 1. Paper Hyperparameters ≠ Universal
-
-The original Transformer paper's settings were optimized for:
-- Large-scale production systems
-- Complex natural language tasks
-- Massive datasets and long training
-
-**They don't transfer to small educational models.**
-
-### 2. Simpler is Often Better
-
-For small models on simple tasks:
-- Fixed LR (0.001) > Complex LR schedule
-- No label smoothing > Label smoothing 0.1
-- No dropout > Dropout 0.1
-
-**Sometimes the simplest approach is the best approach.**
-
-### 3. Test Overfitting First
-
-The overfitting test was the key diagnostic:
-- Proved architecture was correct
-- Used simple fixed LR that worked
-- Isolated the hyperparameter issue
-
-**Always verify your model CAN learn before debugging WHY it isn't.**
-
-### 4. Trust Your Experiments
-
-Initial diagnosis said "LR too low, increase lr_factor to 10."
-- This was based on theory (formula includes d_model^-0.5)
-- Seemed logical
-- **Was completely wrong!**
-
-Experiments showed the opposite:
-- LR was too HIGH, not too low
-- Simple fixed LR worked perfectly
-- Theory didn't match reality
-
-**Empirical evidence > Theoretical assumptions**
+4. **README.md**（更新）
+   - 更新快速開始命令以使用固定學習率
+   - 新增至 TROUBLESHOOTING.md 的連結
+   - 新增關於小型模型超參數調整的註解
 
 ---
 
-## 📚 For Future Reference
+## 🎓 學到的關鍵經驗
 
-### If You Encounter "Model Stuck at Random Guessing"
+### 1. 論文超參數 ≠ 通用
 
-**Step 1: Run the overfit test**
+原始 Transformer 論文的設定是針對以下情況優化的：
+- 大規模生產系統
+- 複雜的自然語言任務
+- 大型資料集和長期訓練
+
+**它們不能轉移到小型教育模型。**
+
+### 2. 簡單通常更好
+
+對於簡單任務上的小型模型：
+- 固定學習率（0.001）> 複雜學習率排程
+- 無標籤平滑 > 標籤平滑 0.1
+- 無 dropout > Dropout 0.1
+
+**有時最簡單的方法就是最好的方法。**
+
+### 3. 先測試過擬合
+
+過擬合測試是關鍵診斷：
+- 證明架構是正確的
+- 使用有效的簡單固定學習率
+- 隔離超參數問題
+
+**在除錯為何模型不學習之前，總是先驗證你的模型能夠學習。**
+
+### 4. 相信你的實驗
+
+初步診斷說「學習率太低，將 lr_factor 提高到 10」。
+- 這是基於理論（公式包含 d_model^-0.5）
+- 看起來合乎邏輯
+- **完全錯誤！**
+
+實驗顯示相反：
+- 學習率太高，而非太低
+- 簡單的固定學習率完美運作
+- 理論與現實不符
+
+**實證證據 > 理論假設**
+
+---
+
+## 📚 未來參考
+
+### 如果你遇到「模型卡在隨機猜測」
+
+**步驟 1：執行過擬合測試**
 ```bash
 python test_overfit.py
 ```
 
-- ✅ If it passes (loss < 0.1): Hyperparameter problem
-- ❌ If it fails: Architecture/code bug
+- ✅ 如果通過（損失 < 0.1）：超參數問題
+- ❌ 如果失敗：架構/程式碼錯誤
 
-**Step 2: Use fixed LR**
+**步驟 2：使用固定學習率**
 ```bash
 python train.py --task copy --epochs 20 --fixed-lr 0.001 --label-smoothing 0.0 --dropout 0.0
 ```
 
-**Step 3: Check results after 3 epochs**
-- ✅ Accuracy > 90%: Working correctly!
-- ❌ Accuracy < 50%: See [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+**步驟 3：3 個 epoch 後檢查結果**
+- ✅ 準確率 > 90%：正確運作！
+- ❌ 準確率 < 50%：參見 [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
-### When to Use What
+### 何時使用什麼
 
-**Fixed LR (`--fixed-lr 0.001`):**
-- ✅ Model size: d_model ≤ 256
-- ✅ Dataset: < 50K samples
-- ✅ Task: Simple (copy, reverse, sort)
-- ✅ Training: < 10K steps
-- **→ Use this for educational/tutorial purposes**
+**固定學習率（`--fixed-lr 0.001`）：**
+- ✅ 模型大小：d_model ≤ 256
+- ✅ 資料集：< 50K 樣本
+- ✅ 任務：簡單（複製、反轉、排序）
+- ✅ 訓練：< 10K 步驟
+- **→ 用於教育/教學目的**
 
-**Transformer Schedule (`--lr-factor`, `--warmup-steps`):**
-- ✅ Model size: d_model ≥ 512
-- ✅ Dataset: millions of samples
-- ✅ Task: Complex (translation, generation)
-- ✅ Training: 50K+ steps
-- **→ Use this for production-scale models**
-
----
-
-## 🔗 Documentation Structure
-
-For users encountering this issue:
-
-1. **Start here:** [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-   - Symptoms → Diagnosis → Solution
-   - Quick reference for common issues
-   - Decision trees and visual guides
-
-2. **Training guide:** [TRAINING.md](TRAINING.md)
-   - Complete training recipes
-   - Parameter explanations
-   - Performance benchmarks
-
-3. **Technical deep-dive:** [TRAINING_ISSUES.md](TRAINING_ISSUES.md)
-   - Detailed root cause analysis
-   - Experimental results
-   - LR schedule mathematics
-
-4. **Quick start:** [README.md](README.md)
-   - Copy-paste commands
-   - Links to detailed guides
+**Transformer 排程（`--lr-factor`、`--warmup-steps`）：**
+- ✅ 模型大小：d_model ≥ 512
+- ✅ 資料集：數百萬樣本
+- ✅ 任務：複雜（翻譯、生成）
+- ✅ 訓練：50K+ 步驟
+- **→ 用於生產規模模型**
 
 ---
 
-## ✨ Final Status
+## 🔗 文件結構
 
-**Problem:** Model completely failed to learn (stuck at random guessing)  
-**Root Cause:** Transformer LR schedule produces learning rates 5-40x too high for small models  
-**Solution:** Use fixed learning rate (`--fixed-lr 0.001`)  
-**Result:** 98.6% sequence accuracy achieved in just 7 epochs ✅
+對於遇到此問題的使用者：
 
-**All training commands updated and tested.**  
-**All documentation updated with correct information.**  
-**Troubleshooting guide created for future users.**
+1. **從這裡開始：** [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+   - 症狀 → 診斷 → 解決方案
+   - 常見問題的快速參考
+   - 決策樹和視覺指南
+
+2. **訓練指南：** [TRAINING.md](TRAINING.md)
+   - 完整的訓練配方
+   - 參數解釋
+   - 性能基準
+
+3. **技術深入探討：** [TRAINING_ISSUES.md](TRAINING_ISSUES.md)
+   - 詳細的根本原因分析
+   - 實驗結果
+   - 學習率排程數學
+
+4. **快速開始：** [README.md](README.md)
+   - 複製貼上命令
+   - 連結至詳細指南
 
 ---
 
-**This issue is now fully resolved and documented!** 🎉
+## ✨ 最終狀態
+
+**問題：** 模型完全無法學習（卡在隨機猜測）  
+**根本原因：** Transformer 學習率排程對小型模型產生的學習率高出 5-40 倍  
+**解決方案：** 使用固定學習率（`--fixed-lr 0.001`）  
+**結果：** 僅 7 個 epoch 就達到 98.6% 序列準確率 ✅
+
+**所有訓練命令已更新並測試。**  
+**所有文件已更新為正確資訊。**  
+**為未來使用者建立了疑難排解指南。**
+
+---
+
+**此問題現已完全解決並記錄！** 🎉
